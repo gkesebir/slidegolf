@@ -1,0 +1,13 @@
+# Godot-specific files
+.godot/
+# Ignore export templates and build folders
+android/
+build/
+export/
+*.apk
+*.aab
+*.exe
+*.zip
+*.dmg
+*.app
+.import/

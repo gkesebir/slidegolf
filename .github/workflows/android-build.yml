@@ -1,0 +1,35 @@
+name: "Build Android APK"
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  export:
+    name: Export Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.2.2
+
+      - name: Create Export Directories
+        run: mkdir -p build/android
+
+      - name: Export Android APK
+        run: godot --headless --export-release "Android" build/android/SlideGolf.apk
