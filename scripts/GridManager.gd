@@ -9,35 +9,41 @@ class_name GridManager
 
 # Level grid representation
 # 0 = Empty, 1 = Wall, 2 = Diamond, 3 = Hole
+# 4 = PortalIn, 5 = PortalOut, 6 = Button, 7 = Gate, 8 = Fragile Tile
 var grid: Array = [
 	[1, 1, 1, 1, 1, 1, 1],
-	[1, 0, 2, 0, 0, 2, 1],
-	[1, 0, 1, 1, 0, 1, 1],
-	[1, 0, 0, 3, 0, 0, 1],
+	[1, 0, 2, 0, 4, 2, 1], # PortalIn at (4, 1)
+	[1, 0, 1, 7, 0, 1, 1], # Gate at (3, 2)
+	[1, 5, 0, 3, 0, 6, 1], # PortalOut at (1, 3), Hole at (3, 3), Button at (5, 3)
 	[1, 1, 0, 1, 1, 0, 1],
-	[1, 2, 0, 0, 2, 0, 1],
+	[1, 2, 8, 0, 2, 0, 1], # Fragile tile at (2, 5)
 	[1, 1, 1, 1, 1, 1, 1]
 ]
 
 # Track visual nodes
-var cell_visuals: Dictionary = {} # Key: Vector2i (grid position) -> Value: Node
+var cell_visuals: Dictionary = {} # Key: Vector2i -> Value: Node
 var diamond_nodes: Dictionary = {} # Key: Vector2i -> Value: Node
 var hole_node: Node = null
+
+# Phase 3 object visual tracking
+var gate_visuals: Dictionary = {} # Key: Vector2i -> Value: Panel
+var fragile_visuals: Dictionary = {} # Key: Vector2i -> Value: Panel
+var button_visuals: Dictionary = {} # Key: Vector2i -> Value: Panel
+
+# State variables
+var is_gate_open: bool = false
 
 func _ready():
 	setup_grid()
 
 func setup_grid():
-	# Calculate offsets to center the grid on the 1080x1920 viewport
 	var total_w = grid_width * cell_size
 	var total_h = grid_height * cell_size
 	
-	# Centered position
 	var start_x = (1080.0 - total_w) / 2.0
 	var start_y = (1920.0 - total_h) / 2.0
 	position = Vector2(start_x, start_y)
 	
-	# Build the visual grid
 	for y in range(grid_height):
 		for x in range(grid_width):
 			var grid_pos = Vector2i(x, y)
@@ -47,8 +53,7 @@ func setup_grid():
 func create_cell_visual(grid_pos: Vector2i, type: int):
 	var cell_pos = Vector2(grid_pos.x * cell_size, grid_pos.y * cell_size)
 	
-	# 1. Base Empty Cell / Background for pathways
-	# Even walls have a pathway under them or we can just draw path backgrounds for non-wall cells.
+	# Draw background for all non-wall tiles
 	if type != 1:
 		var path_rect = ColorRect.new()
 		path_rect.size = Vector2(cell_size - 4, cell_size - 4)
@@ -56,7 +61,6 @@ func create_cell_visual(grid_pos: Vector2i, type: int):
 		path_rect.color = Color("1a1c23") # Sleek dark background
 		add_child(path_rect)
 		
-		# Draw grid lines or small dots
 		var border = ReferenceRect.new()
 		border.size = path_rect.size
 		border.position = path_rect.position
@@ -64,110 +68,332 @@ func create_cell_visual(grid_pos: Vector2i, type: int):
 		border.border_width = 1.0
 		add_child(border)
 	
-	# 2. Wall (1)
+	# 1. Wall (1)
 	if type == 1:
-		var wall_panel = Panel.new()
-		wall_panel.size = Vector2(cell_size - 6, cell_size - 6)
-		wall_panel.position = cell_pos + Vector2(3, 3)
+		spawn_wall_visual(grid_pos)
 		
-		# Create a beautiful stylebox flat for the wall
+	# 2. Diamond (2)
+	elif type == 2:
+		spawn_diamond_visual(grid_pos, cell_pos)
+		
+	# 3. Hole (3)
+	elif type == 3:
+		spawn_hole_visual(grid_pos, cell_pos)
+		
+	# 4. PortalIn (4)
+	elif type == 4:
+		spawn_portal_visual(grid_pos, cell_pos, Color("ff6d00"), "PortalIn")
+		
+	# 5. PortalOut (5)
+	elif type == 5:
+		spawn_portal_visual(grid_pos, cell_pos, Color("00b0ff"), "PortalOut")
+		
+	# 6. Button (6)
+	elif type == 6:
+		spawn_button_visual(grid_pos, cell_pos)
+		
+	# 7. Gate (7)
+	elif type == 7:
+		spawn_gate_visual(grid_pos, cell_pos)
+		
+	# 8. Fragile Tile (8)
+	elif type == 8:
+		spawn_fragile_visual(grid_pos, cell_pos)
+
+# --- Spawning Helpers ---
+
+func spawn_wall_visual(grid_pos: Vector2i):
+	var cell_pos = Vector2(grid_pos.x * cell_size, grid_pos.y * cell_size)
+	var wall_panel = Panel.new()
+	wall_panel.size = Vector2(cell_size - 6, cell_size - 6)
+	wall_panel.position = cell_pos + Vector2(3, 3)
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("2b303c")
+	style.border_color = Color("00e5ff") # Glowing Cyan
+	style.border_width_left = 3
+	style.border_width_right = 3
+	style.border_width_top = 3
+	style.border_width_bottom = 3
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.shadow_color = Color("00e5ff", 0.25)
+	style.shadow_size = 4
+	
+	wall_panel.add_theme_stylebox_override("panel", style)
+	add_child(wall_panel)
+	cell_visuals[grid_pos] = wall_panel
+
+func spawn_diamond_visual(grid_pos: Vector2i, cell_pos: Vector2):
+	var diamond = Control.new()
+	diamond.size = Vector2(cell_size * 0.4, cell_size * 0.4)
+	diamond.position = cell_pos + Vector2(cell_size * 0.3, cell_size * 0.3)
+	
+	var inner_panel = Panel.new()
+	inner_panel.size = diamond.size
+	inner_panel.pivot_offset = diamond.size / 2.0
+	inner_panel.rotation = deg_to_rad(45)
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("39ff14") # Neon green
+	style.border_color = Color("ffffff")
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_left = 4
+	style.corner_radius_bottom_right = 4
+	style.shadow_color = Color("39ff14", 0.5)
+	style.shadow_size = 8
+	
+	inner_panel.add_theme_stylebox_override("panel", style)
+	diamond.add_child(inner_panel)
+	add_child(diamond)
+	diamond_nodes[grid_pos] = diamond
+	
+	var tween = create_tween().set_loops()
+	tween.tween_property(inner_panel, "scale", Vector2(1.1, 1.1), 0.8).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(inner_panel, "scale", Vector2(0.9, 0.9), 0.8).set_trans(Tween.TRANS_SINE)
+
+func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
+	var hole = Panel.new()
+	var h_size = cell_size * 0.6
+	hole.size = Vector2(h_size, h_size)
+	hole.position = cell_pos + Vector2((cell_size - h_size)/2.0, (cell_size - h_size)/2.0)
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("0d0d1b")
+	style.border_color = Color("ff007f") # Glowing Pink
+	style.border_width_left = 4
+	style.border_width_right = 4
+	style.border_width_top = 4
+	style.border_width_bottom = 4
+	style.corner_radius_top_left = h_size / 2.0
+	style.corner_radius_top_right = h_size / 2.0
+	style.corner_radius_bottom_left = h_size / 2.0
+	style.corner_radius_bottom_right = h_size / 2.0
+	style.shadow_color = Color("ff007f", 0.4)
+	style.shadow_size = 6
+	
+	hole.add_theme_stylebox_override("panel", style)
+	add_child(hole)
+	hole_node = hole
+
+func spawn_portal_visual(grid_pos: Vector2i, cell_pos: Vector2, color: Color, _name: String):
+	var portal = Panel.new()
+	var p_size = cell_size * 0.55
+	portal.size = Vector2(p_size, p_size)
+	portal.position = cell_pos + Vector2((cell_size - p_size)/2.0, (cell_size - p_size)/2.0)
+	portal.pivot_offset = portal.size / 2.0
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("0d0d1b")
+	style.border_color = color
+	style.border_width_left = 3
+	style.border_width_right = 3
+	style.border_width_top = 3
+	style.border_width_bottom = 3
+	style.corner_radius_top_left = p_size / 2.0
+	style.corner_radius_top_right = p_size / 2.0
+	style.corner_radius_bottom_left = p_size / 2.0
+	style.corner_radius_bottom_right = p_size / 2.0
+	style.shadow_color = Color(color, 0.4)
+	style.shadow_size = 8
+	
+	portal.add_theme_stylebox_override("panel", style)
+	add_child(portal)
+	
+	# Add spin animation for portal feel
+	var tween = create_tween().set_loops()
+	tween.tween_property(portal, "rotation", deg_to_rad(360), 2.5).from(0.0)
+
+func spawn_button_visual(grid_pos: Vector2i, cell_pos: Vector2):
+	var button = Panel.new()
+	var b_size = cell_size * 0.5
+	button.size = Vector2(b_size, b_size)
+	button.position = cell_pos + Vector2((cell_size - b_size)/2.0, (cell_size - b_size)/2.0)
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("ffd600") # Glowing yellow
+	style.border_color = Color("ffffff")
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	style.shadow_color = Color("ffd600", 0.3)
+	style.shadow_size = 4
+	
+	button.add_theme_stylebox_override("panel", style)
+	add_child(button)
+	button_visuals[grid_pos] = button
+
+func spawn_gate_visual(grid_pos: Vector2i, cell_pos: Vector2):
+	var gate = Panel.new()
+	gate.size = Vector2(cell_size - 8, cell_size - 8)
+	gate.position = cell_pos + Vector2(4, 4)
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("1e141c")
+	style.border_color = Color("ff1744") # Neon red
+	style.border_width_left = 4
+	style.border_width_right = 4
+	style.border_width_top = 4
+	style.border_width_bottom = 4
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.shadow_color = Color("ff1744", 0.3)
+	style.shadow_size = 6
+	
+	gate.add_theme_stylebox_override("panel", style)
+	add_child(gate)
+	gate_visuals[grid_pos] = gate
+
+func spawn_fragile_visual(grid_pos: Vector2i, cell_pos: Vector2):
+	var fragile = Panel.new()
+	fragile.size = Vector2(cell_size - 10, cell_size - 10)
+	fragile.position = cell_pos + Vector2(5, 5)
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("3e424c") # Slate gray cracked
+	style.border_color = Color("ff9100") # Neon orange cracks indicator
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	
+	fragile.add_theme_stylebox_override("panel", style)
+	add_child(fragile)
+	fragile_visuals[grid_pos] = fragile
+
+# --- State Mechanics ---
+
+# Find first matching portal coordinate
+func get_portal_out_position() -> Vector2i:
+	for y in range(grid_height):
+		for x in range(grid_width):
+			if grid[y][x] == 5: # PortalOut
+				return Vector2i(x, y)
+	return Vector2i(-1, -1)
+
+# Toggle gate visually and logically
+func set_gate_state(is_open: bool):
+	is_gate_open = is_open
+	for pos in gate_visuals.keys():
+		var gate = gate_visuals[pos]
 		var style = StyleBoxFlat.new()
-		style.bg_color = Color("2b303c") # Dark slate
-		style.border_color = Color("00e5ff") # Glowing Cyan
-		style.border_width_left = 3
-		style.border_width_right = 3
-		style.border_width_top = 3
-		style.border_width_bottom = 3
 		style.corner_radius_top_left = 12
 		style.corner_radius_top_right = 12
 		style.corner_radius_bottom_left = 12
 		style.corner_radius_bottom_right = 12
 		
-		# Add shadow for premium feel
-		style.shadow_color = Color("00e5ff", 0.25)
-		style.shadow_size = 4
-		
-		wall_panel.add_theme_stylebox_override("panel", style)
-		add_child(wall_panel)
-		cell_visuals[grid_pos] = wall_panel
-		
-	# 3. Diamond (2)
-	elif type == 2:
-		var diamond = Control.new()
-		diamond.size = Vector2(cell_size * 0.4, cell_size * 0.4)
-		# Center inside the cell
-		diamond.position = cell_pos + Vector2(cell_size * 0.3, cell_size * 0.3)
-		
-		var inner_panel = Panel.new()
-		inner_panel.size = diamond.size
-		inner_panel.pivot_offset = diamond.size / 2.0
-		inner_panel.rotation = deg_to_rad(45) # Rotate to make a diamond
-		
-		var style = StyleBoxFlat.new()
-		style.bg_color = Color("39ff14") # Bright neon green
-		style.border_color = Color("ffffff")
-		style.border_width_left = 2
-		style.border_width_right = 2
-		style.border_width_top = 2
-		style.border_width_bottom = 2
-		style.corner_radius_top_left = 4
-		style.corner_radius_top_right = 4
-		style.corner_radius_bottom_left = 4
-		style.corner_radius_bottom_right = 4
-		
-		# Glowing neon shadow
-		style.shadow_color = Color("39ff14", 0.5)
-		style.shadow_size = 8
-		
-		inner_panel.add_theme_stylebox_override("panel", style)
-		diamond.add_child(inner_panel)
-		add_child(diamond)
-		
-		diamond_nodes[grid_pos] = diamond
-		
-		# Add a subtle hover/idle float animation to the diamond
-		var tween = create_tween().set_loops()
-		tween.tween_property(inner_panel, "scale", Vector2(1.1, 1.1), 0.8).set_trans(Tween.TRANS_SINE)
-		tween.tween_property(inner_panel, "scale", Vector2(0.9, 0.9), 0.8).set_trans(Tween.TRANS_SINE)
-		
-	# 4. Hole (3)
-	elif type == 3:
-		var hole = Panel.new()
-		var h_size = cell_size * 0.6
-		hole.size = Vector2(h_size, h_size)
-		hole.position = cell_pos + Vector2((cell_size - h_size)/2.0, (cell_size - h_size)/2.0)
-		
-		var style = StyleBoxFlat.new()
-		style.bg_color = Color("0d0d1b") # Abyss dark
-		style.border_color = Color("ff007f") # Glowing Pink
-		style.border_width_left = 4
-		style.border_width_right = 4
-		style.border_width_top = 4
-		style.border_width_bottom = 4
-		style.corner_radius_top_left = h_size / 2.0
-		style.corner_radius_top_right = h_size / 2.0
-		style.corner_radius_bottom_left = h_size / 2.0
-		style.corner_radius_bottom_right = h_size / 2.0
-		
-		style.shadow_color = Color("ff007f", 0.4)
-		style.shadow_size = 6
-		
-		hole.add_theme_stylebox_override("panel", style)
-		add_child(hole)
-		hole_node = hole
+		if is_open:
+			# Fade out the gate
+			style.bg_color = Color("1a1c23", 0.1)
+			style.border_color = Color("ff1744", 0.15)
+			style.border_width_left = 2
+			style.border_width_right = 2
+			style.border_width_top = 2
+			style.border_width_bottom = 2
+			style.shadow_size = 0
+		else:
+			# Close the gate
+			style.bg_color = Color("1e141c")
+			style.border_color = Color("ff1744")
+			style.border_width_left = 4
+			style.border_width_right = 4
+			style.border_width_top = 4
+			style.border_width_bottom = 4
+			style.shadow_color = Color("ff1744", 0.3)
+			style.shadow_size = 6
+			
+		gate.add_theme_stylebox_override("panel", style)
 
-# Get value at cell coordinates
+# Crack visual feedback
+func crack_fragile_tile(grid_pos: Vector2i):
+	if fragile_visuals.has(grid_pos):
+		var fragile = fragile_visuals[grid_pos]
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color("4f2b1d") # Warning dark red/brown
+		style.border_color = Color("ff3d00") # Glowing hot red/orange
+		style.border_width_left = 3
+		style.border_width_right = 3
+		style.border_width_top = 3
+		style.border_width_bottom = 3
+		style.corner_radius_top_left = 8
+		style.corner_radius_top_right = 8
+		style.corner_radius_bottom_left = 8
+		style.corner_radius_bottom_right = 8
+		style.shadow_color = Color("ff3d00", 0.4)
+		style.shadow_size = 6
+		fragile.add_theme_stylebox_override("panel", style)
+
+# Destroy tile and place solid Wall (1)
+func destroy_fragile_tile(grid_pos: Vector2i):
+	if fragile_visuals.has(grid_pos):
+		var fragile = fragile_visuals[grid_pos]
+		
+		# Animate breaking out
+		var tween = create_tween()
+		tween.tween_property(fragile, "scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK)
+		tween.tween_callback(fragile.queue_free)
+		fragile_visuals.erase(grid_pos)
+		
+		# Convert logically to Wall (1)
+		grid[grid_pos.y][grid_pos.x] = 1
+		
+		# Spawn wall visual
+		spawn_wall_visual(grid_pos)
+
+# Spawn Diamond (useful for Bonus Mode respawns)
+func spawn_diamond_at(grid_pos: Vector2i):
+	grid[grid_pos.y][grid_pos.x] = 2
+	var cell_pos = Vector2(grid_pos.x * cell_size, grid_pos.y * cell_size)
+	spawn_diamond_visual(grid_pos, cell_pos)
+
+func find_random_empty_cell() -> Vector2i:
+	var empty_cells: Array[Vector2i] = []
+	for y in range(grid_height):
+		for x in range(grid_width):
+			if grid[y][x] == 0:
+				empty_cells.append(Vector2i(x, y))
+	if empty_cells.size() > 0:
+		randomize()
+		return empty_cells[randi() % empty_cells.size()]
+	return Vector2i(-1, -1)
+
+# Get cell type (takes gate state into account)
 func get_cell_type(grid_pos: Vector2i) -> int:
 	if grid_pos.x < 0 or grid_pos.x >= grid_width or grid_pos.y < 0 or grid_pos.y >= grid_height:
-		return -1 # Out of bounds is treated as an obstacle
-	return grid[grid_pos.y][grid_pos.x]
+		return -1
+		
+	var type = grid[grid_pos.y][grid_pos.x]
+	
+	# If it's a gate and gates are currently open, treat it as empty path (0)
+	if type == 7 and is_gate_open:
+		return 0
+		
+	return type
 
-# Set value at cell coordinates (e.g. collecting a diamond)
+# Set cell type
 func set_cell_type(grid_pos: Vector2i, type: int):
 	if grid_pos.x >= 0 and grid_pos.x < grid_width and grid_pos.y >= 0 and grid_pos.y < grid_height:
 		grid[grid_pos.y][grid_pos.x] = type
 
-# Get world coordinates for a grid cell center
+# Get cell center world coordinates
 func get_cell_world_position(grid_pos: Vector2i) -> Vector2:
 	var local_pos = Vector2(
 		grid_pos.x * cell_size + cell_size / 2.0,
@@ -175,37 +401,38 @@ func get_cell_world_position(grid_pos: Vector2i) -> Vector2:
 	)
 	return global_position + local_pos
 
-# Remove diamond visuals
+# Remove diamond visual
 func remove_diamond_visual(grid_pos: Vector2i):
 	if diamond_nodes.has(grid_pos):
 		var node = diamond_nodes[grid_pos]
-		
-		# Animate shrinking out
 		var tween = create_tween()
 		tween.tween_property(node, "scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 		tween.tween_callback(node.queue_free)
-		
 		diamond_nodes.erase(grid_pos)
-		set_cell_type(grid_pos, 0) # Set cell as empty in grid data
+		set_cell_type(grid_pos, 0)
 
+# Complete level reset
 func reset_grid():
-	# Clear existing diamond nodes, walls, path visuals
 	for child in get_children():
 		child.queue_free()
+		
 	cell_visuals.clear()
 	diamond_nodes.clear()
 	hole_node = null
+	gate_visuals.clear()
+	fragile_visuals.clear()
+	button_visuals.clear()
+	is_gate_open = false
 	
-	# Reset grid data to initial state
+	# Reset level layout to default
 	grid = [
 		[1, 1, 1, 1, 1, 1, 1],
-		[1, 0, 2, 0, 0, 2, 1],
-		[1, 0, 1, 1, 0, 1, 1],
-		[1, 0, 0, 3, 0, 0, 1],
+		[1, 0, 2, 0, 4, 2, 1],
+		[1, 0, 1, 7, 0, 1, 1],
+		[1, 5, 0, 3, 0, 6, 1],
 		[1, 1, 0, 1, 1, 0, 1],
-		[1, 2, 0, 0, 2, 0, 1],
+		[1, 2, 8, 0, 2, 0, 1],
 		[1, 1, 1, 1, 1, 1, 1]
 	]
 	
 	setup_grid()
-

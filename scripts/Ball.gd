@@ -7,20 +7,22 @@ class_name Ball
 @export var ball_color: Color = Color("ffffff")
 @export var glow_color: Color = Color("00e5ff")
 
-# Node References (can be assigned by GameManager or set on ready)
+# Node References
 var grid_manager: GridManager
 var game_manager: GameManager
 
 # Movement state
-var grid_position: Vector2i = Vector2i(1, 1) # Initial grid position
+var grid_position: Vector2i = Vector2i(1, 1)
 var is_moving: bool = false
 
 # Swipe Input tracking
 var swipe_start_pos: Vector2 = Vector2.ZERO
 var min_swipe_distance: float = 50.0
 
+# Phase 3 state tracking
+var crossed_fragile_tiles: Array[Vector2i] = []
+
 func _ready():
-	# Redraw to see the ball
 	queue_redraw()
 
 func initialize(start_grid_pos: Vector2i, grid_mgr: GridManager, game_mgr: GameManager):
@@ -28,22 +30,27 @@ func initialize(start_grid_pos: Vector2i, grid_mgr: GridManager, game_mgr: GameM
 	grid_manager = grid_mgr
 	game_manager = game_mgr
 	
-	# Instantly snap to the initial position
+	crossed_fragile_tiles.clear()
+	
+	# Instantly snap to start pos
 	global_position = grid_manager.get_cell_world_position(grid_position)
+	
+	# Verify button state at start
+	update_button_trigger_states()
 
 func _draw():
-	# Draw glow circle
 	draw_circle(Vector2.ZERO, radius + 4, Color(glow_color.r, glow_color.g, glow_color.b, 0.3))
-	# Draw main white ball
 	draw_circle(Vector2.ZERO, radius, ball_color)
-	# Draw sharp inner border
 	draw_arc(Vector2.ZERO, radius, 0, TAU, 32, glow_color, 2.5, true)
 
 func _input(event):
 	if is_moving:
 		return
 		
-	# Mouse/Touch support
+	# Block swipes if victory screen is visible
+	if game_manager and game_manager.victory_screen and game_manager.victory_screen.visible:
+		return
+		
 	if event is InputEventMouseButton:
 		if event.pressed:
 			swipe_start_pos = event.position
@@ -65,15 +72,12 @@ func _input(event):
 func handle_swipe(swipe_vector: Vector2):
 	var swipe_dir = Vector2i.ZERO
 	
-	# Determine if swipe is horizontal or vertical
 	if abs(swipe_vector.x) > abs(swipe_vector.y):
-		# Horizontal swipe
 		if swipe_vector.x > 0:
 			swipe_dir = Vector2i(1, 0) # Right
 		else:
 			swipe_dir = Vector2i(-1, 0) # Left
 	else:
-		# Vertical swipe
 		if swipe_vector.y > 0:
 			swipe_dir = Vector2i(0, 1) # Down
 		else:
@@ -86,65 +90,116 @@ func slide_to(dir: Vector2i):
 	if is_moving:
 		return
 		
-	var path_cells: Array[Vector2i] = []
+	# Structure of path steps: Array of Dict { "pos": Vector2i, "teleport": bool }
+	var path_steps: Array = []
 	var current = grid_position
 	var reached_hole = false
 	
-	# Calculate path
+	crossed_fragile_tiles.clear()
+	
+	# Calculate path with Portals, Switches, Cracked Tiles, and Holes
 	while true:
 		var next_pos = current + dir
 		var type = grid_manager.get_cell_type(next_pos)
 		
-		# If next cell is wall or out of bounds, stop sliding
+		# Hitting wall or out of bounds
 		if type == 1 or type == -1:
 			break
 			
-		# If next cell is the hole
+		# 4. PortalIn
+		if type == 4:
+			var portal_out = grid_manager.get_portal_out_position()
+			if portal_out != Vector2i(-1, -1):
+				# Move into PortalIn
+				path_steps.append({ "pos": next_pos, "teleport": false })
+				# Teleport to PortalOut
+				path_steps.append({ "pos": portal_out, "teleport": true })
+				current = portal_out
+				continue
+				
+		# 3. Hole
 		if type == 3:
-			if game_manager.all_diamonds_collected():
+			# In Bonus Mode there is no Hole victory condition
+			if not game_manager.is_bonus_mode and game_manager.all_diamonds_collected():
 				current = next_pos
 				reached_hole = true
-				path_cells.append(current)
+				path_steps.append({ "pos": current, "teleport": false })
 				break
 			else:
-				# Slide over the hole (treat it as empty) and continue
+				# Slide over
 				current = next_pos
-				path_cells.append(current)
-		else:
-			# Regular path or diamond
+				path_steps.append({ "pos": current, "teleport": false })
+				
+		# 8. Fragile Tile
+		elif type == 8:
 			current = next_pos
-			path_cells.append(current)
+			path_steps.append({ "pos": current, "teleport": false })
+			if not crossed_fragile_tiles.has(current):
+				crossed_fragile_tiles.append(current)
+				
+		else:
+			# Empty, Diamond, Button, or Open Gate
+			current = next_pos
+			path_steps.append({ "pos": current, "teleport": false })
 			
-	# If we have cells to slide to, start movement
-	if path_cells.size() > 0:
+	# Animate the path
+	if path_steps.size() > 0:
 		is_moving = true
-		
 		var tween = create_tween().set_parallel(false)
 		
-		for step_pos in path_cells:
-			var target_world_pos = grid_manager.get_cell_world_position(step_pos)
-			# Animate sliding to the cell
-			tween.tween_property(self, "global_position", target_world_pos, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-			# Triggers when the ball reaches the cell
-			tween.tween_callback(func(): on_reach_cell(step_pos))
+		for step in path_steps:
+			var pos = step["pos"]
+			var is_teleport = step["teleport"]
 			
-		# At the end of the full slide path
+			if is_teleport:
+				# Teleport instantly
+				tween.tween_callback(func(): 
+					global_position = grid_manager.get_cell_world_position(pos)
+					# Reset internal position during teleport step
+					grid_position = pos
+				)
+			else:
+				# Slide smoothly
+				var target_world_pos = grid_manager.get_cell_world_position(pos)
+				tween.tween_property(self, "global_position", target_world_pos, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+				tween.tween_callback(func(): on_reach_cell(pos))
+				
 		tween.tween_callback(func(): on_slide_finished(current, reached_hole))
 
 func on_reach_cell(cell_pos: Vector2i):
-	# Update internal position
 	grid_position = cell_pos
 	
-	# Check if this cell contains a diamond
-	if grid_manager.get_cell_type(cell_pos) == 2:
-		# Collect diamond
+	var type = grid_manager.get_cell_type(cell_pos)
+	
+	# Check if this cell is a Diamond (2)
+	if type == 2:
 		grid_manager.remove_diamond_visual(cell_pos)
 		game_manager.collect_diamond()
+		
+	# Check if this cell is a Fragile Tile (8)
+	elif type == 8:
+		grid_manager.crack_fragile_tile(cell_pos)
 
 func on_slide_finished(final_pos: Vector2i, reached_hole: bool):
 	grid_position = final_pos
 	is_moving = false
 	
-	# Check win condition
-	if reached_hole:
+	# Apply button presses
+	update_button_trigger_states()
+	
+	# Destroy fragile tiles that we have left
+	for tile in crossed_fragile_tiles:
+		if grid_position != tile:
+			grid_manager.destroy_fragile_tile(tile)
+	crossed_fragile_tiles.clear()
+	
+	# Check win condition (only in normal mode)
+	if reached_hole and not game_manager.is_bonus_mode:
 		game_manager.win_level()
+
+func update_button_trigger_states():
+	var current_cell_type = grid_manager.get_cell_type(grid_position)
+	if current_cell_type == 6: # Standing on Button
+		grid_manager.set_gate_state(true)
+	else:
+		grid_manager.set_gate_state(false)
