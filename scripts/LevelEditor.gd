@@ -15,8 +15,8 @@ var active_tool = 1 # Default: Wall
 var start_marker: Panel
 
 func _ready():
-	if not grid_manager:
-		grid_manager = $GridManager
+	if not is_instance_valid(grid_manager):
+		grid_manager = get_node_or_null("GridManager")
 		
 	# Initialize default grid (borders are walls, inner empty)
 	var default_grid = []
@@ -32,10 +32,11 @@ func _ready():
 	# Place initial hole
 	default_grid[5][5] = 3
 	
-	grid_manager.grid = default_grid
-	grid_manager.grid_width = grid_width
-	grid_manager.grid_height = grid_height
-	grid_manager.reset_grid()
+	if is_instance_valid(grid_manager):
+		grid_manager.grid = default_grid
+		grid_manager.grid_width = grid_width
+		grid_manager.grid_height = grid_height
+		grid_manager.reset_grid()
 	
 	# Connect palette buttons
 	# Array indices mapping:
@@ -71,7 +72,7 @@ func _input(event):
 		elif event is InputEventMouseMotion:
 			is_pressed = (event.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0
 			
-		if is_pressed:
+		if is_pressed and is_instance_valid(grid_manager):
 			var local_pos = grid_manager.get_local_mouse_position()
 			var gx = floor(local_pos.x / grid_manager.cell_size)
 			var gy = floor(local_pos.y / grid_manager.cell_size)
@@ -82,6 +83,8 @@ func _input(event):
 				_paint_cell(grid_pos)
 
 func _paint_cell(grid_pos: Vector2i):
+	if not is_instance_valid(grid_manager):
+		return
 	var current_grid = grid_manager.grid
 	
 	if active_tool == 100:
@@ -119,8 +122,9 @@ func _paint_cell(grid_pos: Vector2i):
 			return
 		current_grid[grid_pos.y][grid_pos.x] = active_tool
 		
-	grid_manager.grid = current_grid
-	grid_manager.reset_grid()
+	if is_instance_valid(grid_manager):
+		grid_manager.grid = current_grid
+		grid_manager.reset_grid()
 	update_start_marker()
 	validate_and_update_status()
 
@@ -166,6 +170,8 @@ func _select_tool(tool_id: int):
 		btn.add_theme_stylebox_override("normal", style)
 
 func update_start_marker():
+	if not is_instance_valid(grid_manager):
+		return
 	if not start_marker:
 		start_marker = Panel.new()
 		start_marker.size = Vector2(grid_manager.cell_size * 0.5, grid_manager.cell_size * 0.5)
@@ -198,6 +204,8 @@ func update_start_marker():
 	start_marker.position = cell_pos + Vector2(grid_manager.cell_size * 0.25, grid_manager.cell_size * 0.25)
 
 func get_level_dictionary() -> Dictionary:
+	if not is_instance_valid(grid_manager):
+		return {}
 	var current_grid = grid_manager.grid
 	var walls_json = []
 	var gems_json = []
