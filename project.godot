@@ -21,6 +21,7 @@ config/features=PackedStringArray("4.7", "Mobile")
 [autoload]
 
 SaveManager="*res://scripts/SaveManager.gd"
+AudioController="*res://scripts/AudioController.gd"
 
 [display]
 

@@ -29,6 +29,9 @@ class_name GameManager
 @export var shop_item_buttons: Array[NodePath] # Array paths: 0 = standard, 1 = iron, 2 = super
 var shop_buttons: Array[Button] = []
 
+# Phase 5 Audio UI
+@export var mute_button: CheckButton
+
 # Game state
 var total_diamonds: int = 0
 var diamonds_collected: int = 0
@@ -74,6 +77,10 @@ func _ready():
 		shop_button.pressed.connect(_on_shop_button_pressed)
 	if shop_close_button:
 		shop_close_button.pressed.connect(_on_shop_close_button_pressed)
+	
+	# Phase 5 Mute button connection
+	if mute_button:
+		mute_button.toggled.connect(_on_mute_toggled)
 		
 	# Resolve shop buttons from NodePaths
 	shop_buttons.clear()
@@ -297,6 +304,7 @@ func update_timer_label():
 func win_level():
 	print("Level Cleared!")
 	level_cleared = true
+	AudioController.play_victory()
 	
 	# Add collected gems to the persistent wallet
 	SaveManager.add_gems(diamonds_collected)
@@ -344,6 +352,11 @@ func _on_restart_button_pressed():
 
 func _on_play_bonus_mode_pressed():
 	start_bonus_mode()
+
+func _on_mute_toggled(button_pressed: bool):
+	AudioController.toggle_mute(button_pressed)
+	if mute_button:
+		mute_button.text = "SES KAPALI" if button_pressed else "SES"
 
 # --- Shop UI Logic ---
 

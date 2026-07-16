@@ -92,16 +92,20 @@ func _input(event):
 	# Block input if UI screens are visible
 	if game_manager:
 		if game_manager.victory_screen and game_manager.victory_screen.visible:
+			print("Ball debug: Input blocked by victory screen.")
 			return
 		if game_manager.get_node_or_null("UI/ShopScreen") and game_manager.get_node_or_null("UI/ShopScreen").visible:
+			print("Ball debug: Input blocked by shop screen.")
 			return
 		
 	if event is InputEventMouseButton:
 		if event.pressed:
 			swipe_start_pos = event.position
+			print("Ball debug: Mouse button pressed at ", swipe_start_pos)
 		else:
 			var swipe_end_pos = event.position
 			var diff = swipe_end_pos - swipe_start_pos
+			print("Ball debug: Mouse button released. Diff length: ", diff.length(), " (min required: ", min_swipe_distance, ")")
 			if diff.length() >= min_swipe_distance:
 				handle_swipe(diff)
 				
@@ -129,7 +133,10 @@ func handle_swipe(swipe_vector: Vector2):
 			swipe_dir = Vector2i(0, -1) # Up
 			
 	if swipe_dir != Vector2i.ZERO:
+		print("Ball debug: Swipe valid. Calling slide_to with dir: ", swipe_dir)
 		slide_to(swipe_dir)
+	else:
+		print("Ball debug: Swipe direction evaluated to ZERO.")
 
 func slide_to(dir: Vector2i):
 	if is_moving:
@@ -141,11 +148,18 @@ func slide_to(dir: Vector2i):
 	
 	crossed_fragile_tiles.clear()
 	
+	print("Ball debug: slide_to starting from ", current, " towards ", dir)
+	
 	while true:
 		var next_pos = current + dir
 		var type = grid_manager.get_cell_type(next_pos)
 		
+		print("Ball debug: Checking cell ", next_pos, " | type = ", type)
+		
+		if type == 1:
+			AudioController.play_hit()
 		if type == 1 or type == 9 or type == -1:
+			print("Ball debug: Hit wall, void, or out of bounds. Stopping scan.")
 			break
 			
 		if type == 4:
