@@ -22,6 +22,30 @@ var min_swipe_distance: float = 50.0
 # Phase 3 state tracking
 var crossed_fragile_tiles: Array[Vector2i] = []
 
+# Phase 4 Physics & Skins Profiles
+const BALL_PROFILES = {
+	"standard": {
+		"name": "Standart Top",
+		"speed_factor": 1.0,
+		"color": Color("ffffff"),
+		"glow_color": Color("00e5ff")
+	},
+	"iron": {
+		"name": "Demir Top",
+		"speed_factor": 1.6, # Slower acceleration / slide
+		"color": Color("90a4ae"),
+		"glow_color": Color("cfd8dc")
+	},
+	"super": {
+		"name": "Süper Top",
+		"speed_factor": 0.6, # Ultra fast slide
+		"color": Color("ff007f"),
+		"glow_color": Color("ff007f")
+	}
+}
+
+var speed_factor: float = 1.0
+
 func _ready():
 	queue_redraw()
 
@@ -32,11 +56,21 @@ func initialize(start_grid_pos: Vector2i, grid_mgr: GridManager, game_mgr: GameM
 	
 	crossed_fragile_tiles.clear()
 	
+	# Apply currently equipped ball profile from SaveManager
+	apply_ball_profile(SaveManager.equipped_ball)
+	
 	# Instantly snap to start pos
 	global_position = grid_manager.get_cell_world_position(grid_position)
 	
 	# Verify button state at start
 	update_button_trigger_states()
+
+func apply_ball_profile(profile_id: String):
+	var profile = BALL_PROFILES.get(profile_id, BALL_PROFILES["standard"])
+	speed_factor = profile["speed_factor"]
+	ball_color = profile["color"]
+	glow_color = profile["glow_color"]
+	queue_redraw()
 
 func _draw():
 	draw_circle(Vector2.ZERO, radius + 4, Color(glow_color.r, glow_color.g, glow_color.b, 0.3))
@@ -47,9 +81,12 @@ func _input(event):
 	if is_moving:
 		return
 		
-	# Block swipes if victory screen is visible
-	if game_manager and game_manager.victory_screen and game_manager.victory_screen.visible:
-		return
+	# Block input if UI screens are visible
+	if game_manager:
+		if game_manager.victory_screen and game_manager.victory_screen.visible:
+			return
+		if game_manager.get_node_or_null("UI/ShopScreen") and game_manager.get_node_or_null("UI/ShopScreen").visible:
+			return
 		
 	if event is InputEventMouseButton:
 		if event.pressed:
@@ -90,47 +127,37 @@ func slide_to(dir: Vector2i):
 	if is_moving:
 		return
 		
-	# Structure of path steps: Array of Dict { "pos": Vector2i, "teleport": bool }
 	var path_steps: Array = []
 	var current = grid_position
 	var reached_hole = false
 	
 	crossed_fragile_tiles.clear()
 	
-	# Calculate path with Portals, Switches, Cracked Tiles, and Holes
 	while true:
 		var next_pos = current + dir
 		var type = grid_manager.get_cell_type(next_pos)
 		
-		# Hitting wall or out of bounds
 		if type == 1 or type == -1:
 			break
 			
-		# 4. PortalIn
 		if type == 4:
 			var portal_out = grid_manager.get_portal_out_position()
 			if portal_out != Vector2i(-1, -1):
-				# Move into PortalIn
 				path_steps.append({ "pos": next_pos, "teleport": false })
-				# Teleport to PortalOut
 				path_steps.append({ "pos": portal_out, "teleport": true })
 				current = portal_out
 				continue
 				
-		# 3. Hole
 		if type == 3:
-			# In Bonus Mode there is no Hole victory condition
 			if not game_manager.is_bonus_mode and game_manager.all_diamonds_collected():
 				current = next_pos
 				reached_hole = true
 				path_steps.append({ "pos": current, "teleport": false })
 				break
 			else:
-				# Slide over
 				current = next_pos
 				path_steps.append({ "pos": current, "teleport": false })
 				
-		# 8. Fragile Tile
 		elif type == 8:
 			current = next_pos
 			path_steps.append({ "pos": current, "teleport": false })
@@ -138,30 +165,28 @@ func slide_to(dir: Vector2i):
 				crossed_fragile_tiles.append(current)
 				
 		else:
-			# Empty, Diamond, Button, or Open Gate
 			current = next_pos
 			path_steps.append({ "pos": current, "teleport": false })
 			
-	# Animate the path
 	if path_steps.size() > 0:
 		is_moving = true
 		var tween = create_tween().set_parallel(false)
+		
+		# Slide duration scaled by ball's speed factor
+		var duration = 0.12 * speed_factor
 		
 		for step in path_steps:
 			var pos = step["pos"]
 			var is_teleport = step["teleport"]
 			
 			if is_teleport:
-				# Teleport instantly
 				tween.tween_callback(func(): 
 					global_position = grid_manager.get_cell_world_position(pos)
-					# Reset internal position during teleport step
 					grid_position = pos
 				)
 			else:
-				# Slide smoothly
 				var target_world_pos = grid_manager.get_cell_world_position(pos)
-				tween.tween_property(self, "global_position", target_world_pos, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+				tween.tween_property(self, "global_position", target_world_pos, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 				tween.tween_callback(func(): on_reach_cell(pos))
 				
 		tween.tween_callback(func(): on_slide_finished(current, reached_hole))
@@ -171,12 +196,10 @@ func on_reach_cell(cell_pos: Vector2i):
 	
 	var type = grid_manager.get_cell_type(cell_pos)
 	
-	# Check if this cell is a Diamond (2)
 	if type == 2:
 		grid_manager.remove_diamond_visual(cell_pos)
 		game_manager.collect_diamond()
 		
-	# Check if this cell is a Fragile Tile (8)
 	elif type == 8:
 		grid_manager.crack_fragile_tile(cell_pos)
 
@@ -184,22 +207,19 @@ func on_slide_finished(final_pos: Vector2i, reached_hole: bool):
 	grid_position = final_pos
 	is_moving = false
 	
-	# Apply button presses
 	update_button_trigger_states()
 	
-	# Destroy fragile tiles that we have left
 	for tile in crossed_fragile_tiles:
 		if grid_position != tile:
 			grid_manager.destroy_fragile_tile(tile)
 	crossed_fragile_tiles.clear()
 	
-	# Check win condition (only in normal mode)
 	if reached_hole and not game_manager.is_bonus_mode:
 		game_manager.win_level()
 
 func update_button_trigger_states():
 	var current_cell_type = grid_manager.get_cell_type(grid_position)
-	if current_cell_type == 6: # Standing on Button
+	if current_cell_type == 6:
 		grid_manager.set_gate_state(true)
 	else:
 		grid_manager.set_gate_state(false)

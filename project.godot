@@ -18,6 +18,10 @@ config/name="Slide Golf"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 
+[autoload]
+
+SaveManager="*res://scripts/SaveManager.gd"
+
 [display]
 
 window/size/viewport_width=1080

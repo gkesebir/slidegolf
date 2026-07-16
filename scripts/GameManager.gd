@@ -19,6 +19,14 @@ class_name GameManager
 @export var timer_label: Label
 @export var play_bonus_mode_button: Button
 
+# Phase 4 Shop UI Nodes
+@export var shop_button: Button
+@export var shop_screen: Control
+@export var shop_close_button: Button
+@export var shop_gems_label: Label
+@export var shop_status_label: Label
+@export var shop_item_buttons: Array[Button] # Array indices: 0 = standard, 1 = iron, 2 = super
+
 # Game state
 var total_diamonds: int = 0
 var diamonds_collected: int = 0
@@ -27,8 +35,14 @@ var current_level_path: String = ""
 # Phase 3 Bonus Mode state
 var is_bonus_mode: bool = false
 var bonus_time_left: float = 30.0
-var player_wallet_diamonds: int = 0
 var game_over: bool = false
+
+# Phase 4 Shop pricing
+const BALL_PRICES = {
+	"standard": 0,
+	"iron": 20,
+	"super": 50
+}
 
 func _ready():
 	if not grid_manager:
@@ -47,6 +61,17 @@ func _ready():
 		
 	if play_bonus_mode_button:
 		play_bonus_mode_button.pressed.connect(_on_play_bonus_mode_pressed)
+		
+	# Phase 4 Shop UI Connections
+	if shop_button:
+		shop_button.pressed.connect(_on_shop_button_pressed)
+	if shop_close_button:
+		shop_close_button.pressed.connect(_on_shop_close_button_pressed)
+		
+	if shop_item_buttons.size() >= 3:
+		shop_item_buttons[0].pressed.connect(func(): _on_shop_item_clicked("standard"))
+		shop_item_buttons[1].pressed.connect(func(): _on_shop_item_clicked("iron"))
+		shop_item_buttons[2].pressed.connect(func(): _on_shop_item_clicked("super"))
 		
 	style_ui()
 	initialize_game()
@@ -69,6 +94,9 @@ func initialize_game():
 	game_over = false
 	if timer_label:
 		timer_label.hide()
+		
+	if shop_screen:
+		shop_screen.hide()
 		
 	var level1_path = "res://levels/level_1.json"
 	if FileAccess.file_exists(level1_path):
@@ -128,7 +156,6 @@ func start_bonus_mode():
 	bonus_time_left = 30.0
 	diamonds_collected = 0
 	
-	# Load a standard grid structure but reset it
 	grid_manager.reset_grid()
 	total_diamonds = count_diamonds_in_grid()
 	
@@ -145,21 +172,22 @@ func start_bonus_mode():
 
 func end_bonus_level():
 	game_over = true
-	player_wallet_diamonds += diamonds_collected
-	print("Time's Up! Gems collected: ", diamonds_collected, ". Wallet Total: ", player_wallet_diamonds)
+	
+	# Add collected gems to the persistent wallet
+	SaveManager.add_gems(diamonds_collected)
+	update_ui()
 	
 	if victory_screen:
 		victory_screen.show()
 		
-		# Update victory labels for Time-Attack Modu
 		var title_label = victory_screen.get_node_or_null("Panel/VictoryLabel")
 		if title_label:
 			title_label.text = "TIME'S UP!"
-			title_label.add_theme_color_override("font_color", Color("ff9100")) # Warning Orange
+			title_label.add_theme_color_override("font_color", Color("ff9100"))
 			
 		var info_label = victory_screen.get_node_or_null("Panel/InfoLabel")
 		if info_label:
-			info_label.text = "Gems Collected: %d\nTotal Wallet: %d" % [diamonds_collected, player_wallet_diamonds]
+			info_label.text = "Gems Collected: %d\nTotal Wallet: %d" % [diamonds_collected, SaveManager.gems_wallet]
 			
 		var panel = victory_screen.get_node_or_null("Panel")
 		if panel:
@@ -180,11 +208,9 @@ func collect_diamond():
 	diamonds_collected += 1
 	
 	if is_bonus_mode:
-		# Add time
 		bonus_time_left += 1.5
 		update_timer_label()
 		
-		# Respawn a new diamond
 		var new_pos = grid_manager.find_random_empty_cell()
 		if new_pos != Vector2i(-1, -1):
 			grid_manager.spawn_diamond_at(new_pos)
@@ -198,12 +224,12 @@ func all_diamonds_collected() -> bool:
 func update_ui():
 	if diamond_label:
 		if is_bonus_mode:
-			diamond_label.text = "TIME-ATTACK | GEMS: %d" % diamonds_collected
+			diamond_label.text = "TIME-ATTACK | GEMS: %d | WALLET: %d" % [diamonds_collected, SaveManager.gems_wallet]
 		elif current_level_path != "":
 			var level_num = current_level_path.get_file().get_basename().replace("level_", "")
-			diamond_label.text = "LEVEL %s | GEMS: %d / %d" % [level_num, diamonds_collected, total_diamonds]
+			diamond_label.text = "LEVEL %s | GEMS: %d / %d | WALLET: %d" % [level_num, diamonds_collected, total_diamonds, SaveManager.gems_wallet]
 		else:
-			diamond_label.text = "GEMS: %d / %d" % [diamonds_collected, total_diamonds]
+			diamond_label.text = "GEMS: %d / %d | WALLET: %d" % [diamonds_collected, total_diamonds, SaveManager.gems_wallet]
 
 func update_timer_label():
 	if timer_label:
@@ -211,10 +237,14 @@ func update_timer_label():
 
 func win_level():
 	print("Level Cleared!")
+	
+	# Add collected gems to the persistent wallet
+	SaveManager.add_gems(diamonds_collected)
+	update_ui()
+	
 	if victory_screen:
 		victory_screen.show()
 		
-		# Reset normal titles just in case we played bonus mode before
 		var title_label = victory_screen.get_node_or_null("Panel/VictoryLabel")
 		if title_label:
 			title_label.text = "LEVEL CLEARED!"
@@ -222,7 +252,7 @@ func win_level():
 			
 		var info_label = victory_screen.get_node_or_null("Panel/InfoLabel")
 		if info_label:
-			info_label.text = "All diamonds collected."
+			info_label.text = "Gems Collected: %d\nTotal Wallet: %d" % [diamonds_collected, SaveManager.gems_wallet]
 			
 		var panel = victory_screen.get_node_or_null("Panel")
 		if panel:
@@ -242,6 +272,110 @@ func _on_restart_button_pressed():
 
 func _on_play_bonus_mode_pressed():
 	start_bonus_mode()
+
+# --- Shop UI Logic ---
+
+func _on_shop_button_pressed():
+	if shop_screen:
+		shop_screen.show()
+		refresh_shop_ui()
+		
+		var panel = shop_screen.get_node_or_null("Panel")
+		if panel:
+			panel.scale = Vector2.ZERO
+			panel.pivot_offset = panel.size / 2.0
+			var tween = create_tween()
+			tween.tween_property(panel, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _on_shop_close_button_pressed():
+	if shop_screen:
+		shop_screen.hide()
+
+func _on_shop_item_clicked(ball_id: String):
+	var is_unlocked = SaveManager.unlocked_balls.has(ball_id)
+	
+	if is_unlocked:
+		# Equip
+		SaveManager.equip_ball(ball_id)
+		if ball:
+			ball.apply_ball_profile(ball_id)
+		show_shop_status("Equipped: " + Ball.BALL_PROFILES[ball_id]["name"], Color("00e5ff"))
+	else:
+		# Buy
+		var price = BALL_PRICES.get(ball_id, 999)
+		if SaveManager.gems_wallet >= price:
+			if SaveManager.deduct_gems(price):
+				SaveManager.unlock_ball(ball_id)
+				SaveManager.equip_ball(ball_id)
+				if ball:
+					ball.apply_ball_profile(ball_id)
+				show_shop_status("Unlocked & Equipped: " + Ball.BALL_PROFILES[ball_id]["name"], Color("39ff14"))
+		else:
+			show_shop_status("Not enough gems! Need " + str(price) + " gems.", Color("ff1744"))
+			
+	refresh_shop_ui()
+	update_ui()
+
+func refresh_shop_ui():
+	if shop_gems_label:
+		shop_gems_label.text = "GEMS: %d" % SaveManager.gems_wallet
+		
+	# Refresh button texts
+	if shop_item_buttons.size() >= 3:
+		update_item_button_state(shop_item_buttons[0], "standard")
+		update_item_button_state(shop_item_buttons[1], "iron")
+		update_item_button_state(shop_item_buttons[2], "super")
+
+func update_item_button_state(btn: Button, ball_id: String):
+	if not btn:
+		return
+	
+	var is_unlocked = SaveManager.unlocked_balls.has(ball_id)
+	var is_equipped = SaveManager.equipped_ball == ball_id
+	
+	if is_equipped:
+		btn.text = "EQUIPPED"
+		btn.disabled = true
+		# Faded styling
+		var style = btn.get_theme_stylebox("normal").duplicate()
+		style.bg_color = Color("1a242c")
+		style.border_color = Color("00e5ff", 0.5)
+		style.shadow_size = 0
+		btn.add_theme_stylebox_override("normal", style)
+		btn.add_theme_color_override("font_color", Color("00e5ff", 0.5))
+	elif is_unlocked:
+		btn.text = "EQUIP"
+		btn.disabled = false
+		var style = btn.get_theme_stylebox("normal").duplicate()
+		style.bg_color = Color("1c1e26")
+		style.border_color = Color("00e5ff")
+		style.shadow_color = Color("00e5ff", 0.2)
+		style.shadow_size = 4
+		btn.add_theme_stylebox_override("normal", style)
+		btn.add_theme_color_override("font_color", Color("00e5ff"))
+	else:
+		var price = BALL_PRICES.get(ball_id, 0)
+		btn.text = "BUY: %d GEMS" % price
+		btn.disabled = false
+		var style = btn.get_theme_stylebox("normal").duplicate()
+		style.bg_color = Color("1c1e26")
+		style.border_color = Color("ff9100") # Amber
+		style.shadow_color = Color("ff9100", 0.2)
+		style.shadow_size = 4
+		btn.add_theme_stylebox_override("normal", style)
+		btn.add_theme_color_override("font_color", Color("ff9100"))
+
+func show_shop_status(msg: String, color: Color):
+	if shop_status_label:
+		shop_status_label.text = msg
+		shop_status_label.add_theme_color_override("font_color", color)
+		
+		# Fade animation
+		shop_status_label.modulate.a = 1.0
+		var tween = create_tween()
+		tween.tween_property(shop_status_label, "modulate:a", 0.0, 3.0).set_delay(1.0)
+
+# --- Debug and Solver ---
 
 func _on_generate_levels_pressed():
 	generate_and_save_50_levels()
@@ -265,7 +399,6 @@ func generate_and_save_50_levels():
 	
 	while count < 50 and attempts < max_attempts:
 		attempts += 1
-		# Standard 7x7 solvable levels
 		var level = LevelGenerator.generate_level(7, 7, 7, 3)
 		if level.is_empty():
 			continue
@@ -298,13 +431,15 @@ func generate_and_save_50_levels():
 		else:
 			debug_status_label.text = "Failed to generate 50 levels (attempts: %d)." % attempts
 
+# --- Procedural UI Styling ---
+
 func style_ui():
-	# Style the Victory Panel
+	# 1. Victory Panel
 	var panel = victory_screen.get_node_or_null("Panel") if victory_screen else null
 	if panel:
 		var panel_style = StyleBoxFlat.new()
 		panel_style.bg_color = Color("12141c")
-		panel_style.border_color = Color("ff007f") # Glowing Pink
+		panel_style.border_color = Color("ff007f")
 		panel_style.border_width_left = 4
 		panel_style.border_width_right = 4
 		panel_style.border_width_top = 4
@@ -317,11 +452,11 @@ func style_ui():
 		panel_style.shadow_size = 15
 		panel.add_theme_stylebox_override("panel", panel_style)
 		
-	# Style the Restart Button
+	# 2. Restart Button
 	if restart_button:
 		var btn_normal = StyleBoxFlat.new()
 		btn_normal.bg_color = Color("1c1e26")
-		btn_normal.border_color = Color("00e5ff") # Neon Cyan
+		btn_normal.border_color = Color("00e5ff")
 		btn_normal.border_width_left = 2
 		btn_normal.border_width_right = 2
 		btn_normal.border_width_top = 2
@@ -349,11 +484,11 @@ func style_ui():
 		restart_button.add_theme_color_override("font_hover_color", Color("ffffff"))
 		restart_button.add_theme_color_override("font_pressed_color", Color("00b2cc"))
 		
-	# Style the Generate Levels Button
+	# 3. Generate Levels Button
 	if generate_levels_button:
 		var btn_normal = StyleBoxFlat.new()
 		btn_normal.bg_color = Color("1c1e26")
-		btn_normal.border_color = Color("ab47bc") # Purple Glow
+		btn_normal.border_color = Color("ab47bc")
 		btn_normal.border_width_left = 2
 		btn_normal.border_width_right = 2
 		btn_normal.border_width_top = 2
@@ -381,11 +516,11 @@ func style_ui():
 		generate_levels_button.add_theme_color_override("font_hover_color", Color("ffffff"))
 		generate_levels_button.add_theme_color_override("font_pressed_color", Color("8e24aa"))
 
-	# Style the Play Bonus Mode Button
+	# 4. Play Bonus Mode Button
 	if play_bonus_mode_button:
 		var btn_normal = StyleBoxFlat.new()
 		btn_normal.bg_color = Color("1c1e26")
-		btn_normal.border_color = Color("ff9100") # Neon Amber/Orange
+		btn_normal.border_color = Color("ff9100")
 		btn_normal.border_width_left = 2
 		btn_normal.border_width_right = 2
 		btn_normal.border_width_top = 2
@@ -412,3 +547,106 @@ func style_ui():
 		play_bonus_mode_button.add_theme_color_override("font_color", Color("ff9100"))
 		play_bonus_mode_button.add_theme_color_override("font_hover_color", Color("ffffff"))
 		play_bonus_mode_button.add_theme_color_override("font_pressed_color", Color("e65100"))
+
+	# 5. Shop Button
+	if shop_button:
+		var btn_normal = StyleBoxFlat.new()
+		btn_normal.bg_color = Color("1c1e26")
+		btn_normal.border_color = Color("ffd600") # Yellow
+		btn_normal.border_width_left = 2
+		btn_normal.border_width_right = 2
+		btn_normal.border_width_top = 2
+		btn_normal.border_width_bottom = 2
+		btn_normal.corner_radius_top_left = 12
+		btn_normal.corner_radius_top_right = 12
+		btn_normal.corner_radius_bottom_left = 12
+		btn_normal.corner_radius_bottom_right = 12
+		btn_normal.shadow_color = Color("ffd600", 0.25)
+		btn_normal.shadow_size = 6
+		
+		var btn_hover = btn_normal.duplicate()
+		btn_hover.bg_color = Color("252936")
+		btn_hover.shadow_size = 10
+		
+		var btn_pressed = btn_normal.duplicate()
+		btn_pressed.bg_color = Color("0f1014")
+		btn_pressed.shadow_size = 2
+		
+		shop_button.add_theme_stylebox_override("normal", btn_normal)
+		shop_button.add_theme_stylebox_override("hover", btn_hover)
+		shop_button.add_theme_stylebox_override("pressed", btn_pressed)
+		
+		shop_button.add_theme_color_override("font_color", Color("ffd600"))
+		shop_button.add_theme_color_override("font_hover_color", Color("ffffff"))
+		shop_button.add_theme_color_override("font_pressed_color", Color("c5a300"))
+
+	# 6. Shop Panel Overlay
+	var shop_panel = shop_screen.get_node_or_null("Panel") if shop_screen else null
+	if shop_panel:
+		var panel_style = StyleBoxFlat.new()
+		panel_style.bg_color = Color("12141c")
+		panel_style.border_color = Color("ffd600") # Neon Yellow
+		panel_style.border_width_left = 4
+		panel_style.border_width_right = 4
+		panel_style.border_width_top = 4
+		panel_style.border_width_bottom = 4
+		panel_style.corner_radius_top_left = 24
+		panel_style.corner_radius_top_right = 24
+		panel_style.corner_radius_bottom_left = 24
+		panel_style.corner_radius_bottom_right = 24
+		panel_style.shadow_color = Color("ffd600", 0.2)
+		panel_style.shadow_size = 15
+		shop_panel.add_theme_stylebox_override("panel", panel_style)
+		
+	# 7. Shop Close Button
+	if shop_close_button:
+		var btn_normal = StyleBoxFlat.new()
+		btn_normal.bg_color = Color("1c1e26")
+		btn_normal.border_color = Color("ff1744") # Red
+		btn_normal.border_width_left = 2
+		btn_normal.border_width_right = 2
+		btn_normal.border_width_top = 2
+		btn_normal.border_width_bottom = 2
+		btn_normal.corner_radius_top_left = 8
+		btn_normal.corner_radius_top_right = 8
+		btn_normal.corner_radius_bottom_left = 8
+		btn_normal.corner_radius_bottom_right = 8
+		
+		var btn_hover = btn_normal.duplicate()
+		btn_hover.bg_color = Color("ff1744")
+		btn_hover.shadow_color = Color("ff1744", 0.3)
+		btn_hover.shadow_size = 6
+		
+		var btn_pressed = btn_normal.duplicate()
+		btn_pressed.bg_color = Color("b20020")
+		
+		shop_close_button.add_theme_stylebox_override("normal", btn_normal)
+		shop_close_button.add_theme_stylebox_override("hover", btn_hover)
+		shop_close_button.add_theme_stylebox_override("pressed", btn_pressed)
+		
+		shop_close_button.add_theme_color_override("font_color", Color("ff1744"))
+		shop_close_button.add_theme_color_override("font_hover_color", Color("ffffff"))
+
+	# 8. Style Item Action Buttons initially
+	for i in range(shop_item_buttons.size()):
+		var btn = shop_item_buttons[i]
+		if btn:
+			var btn_style = StyleBoxFlat.new()
+			btn_style.bg_color = Color("1c1e26")
+			btn_style.border_width_left = 2
+			btn_style.border_width_right = 2
+			btn_style.border_width_top = 2
+			btn_style.border_width_bottom = 2
+			btn_style.corner_radius_top_left = 10
+			btn_style.corner_radius_top_right = 10
+			btn_style.corner_radius_bottom_left = 10
+			btn_style.corner_radius_bottom_right = 10
+			btn.add_theme_stylebox_override("normal", btn_style)
+			
+			var btn_hov = btn_style.duplicate()
+			btn_hov.bg_color = Color("252936")
+			btn.add_theme_stylebox_override("hover", btn_hov)
+			
+			var btn_pr = btn_style.duplicate()
+			btn_pr.bg_color = Color("0f1014")
+			btn.add_theme_stylebox_override("pressed", btn_pr)
