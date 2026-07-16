@@ -159,10 +159,10 @@ func _play_applause():
 
 		var sample_f := 0.0
 		for clap_t in clap_times:
-			var dt := t - clap_t
+			var dt: float = t - float(clap_t)
 			if dt >= 0.0 and dt < 0.03:
 				# Each clap is a very short noise burst with sharp attack
-				var clap_env := (1.0 - dt / 0.03)
+				var clap_env: float = (1.0 - dt / 0.03)
 				clap_env = clap_env * clap_env
 				sample_f += randf_range(-1.0, 1.0) * clap_env * 0.15
 
