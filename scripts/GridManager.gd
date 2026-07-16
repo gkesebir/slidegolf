@@ -53,15 +53,16 @@ func setup_grid():
 func create_cell_visual(grid_pos: Vector2i, type: int):
 	var cell_pos = Vector2(grid_pos.x * cell_size, grid_pos.y * cell_size)
 	
-	# Draw checkerboard background for all cells
-	var bg_rect = ColorRect.new()
-	bg_rect.size = Vector2(cell_size, cell_size)
-	bg_rect.position = cell_pos
-	if (grid_pos.x + grid_pos.y) % 2 == 0:
-		bg_rect.color = Color("a1d59b") # Light pastel green
-	else:
-		bg_rect.color = Color("87c380") # Darker pastel green
-	add_child(bg_rect)
+	# Draw checkerboard background for all non-void cells
+	if type != 9:
+		var bg_rect = ColorRect.new()
+		bg_rect.size = Vector2(cell_size, cell_size)
+		bg_rect.position = cell_pos
+		if (grid_pos.x + grid_pos.y) % 2 == 0:
+			bg_rect.color = Color("a1d59b") # Light pastel green
+		else:
+			bg_rect.color = Color("87c380") # Darker pastel green
+		add_child(bg_rect)
 	
 	# 1. Wall (1)
 	if type == 1:
@@ -94,6 +95,10 @@ func create_cell_visual(grid_pos: Vector2i, type: int):
 	# 8. Fragile Tile (8)
 	elif type == 8:
 		spawn_fragile_visual(grid_pos, cell_pos)
+		
+	# 10. Mud (10)
+	elif type == 10:
+		spawn_mud_visual(grid_pos, cell_pos)
 
 # --- Spawning Helpers ---
 
@@ -527,6 +532,41 @@ func get_cell_type(grid_pos: Vector2i) -> int:
 func set_cell_type(grid_pos: Vector2i, type: int):
 	if grid_pos.x >= 0 and grid_pos.x < grid_width and grid_pos.y >= 0 and grid_pos.y < grid_height:
 		grid[grid_pos.y][grid_pos.x] = type
+
+func spawn_mud_visual(grid_pos: Vector2i, cell_pos: Vector2):
+	var mud = Panel.new()
+	var m_size = cell_size - 4
+	mud.size = Vector2(m_size, m_size)
+	mud.position = cell_pos + Vector2(2, 2)
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("d7ccc8") # Mud light brown (Golf Peaks pastel theme)
+	style.border_color = Color("bcaaa4") # Mud border
+	style.border_width_left = 3
+	style.border_width_right = 3
+	style.border_width_top = 3
+	style.border_width_bottom = 3
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	mud.add_theme_stylebox_override("panel", style)
+	
+	# Add some little mud ripples or details
+	var ripple = ColorRect.new()
+	ripple.size = Vector2(cell_size * 0.4, 4)
+	ripple.position = Vector2(cell_size * 0.3, cell_size * 0.3)
+	ripple.color = Color("8d6e63", 0.3)
+	mud.add_child(ripple)
+	
+	var ripple2 = ColorRect.new()
+	ripple2.size = Vector2(cell_size * 0.3, 4)
+	ripple2.position = Vector2(cell_size * 0.4, cell_size * 0.6)
+	ripple2.color = Color("8d6e63", 0.3)
+	mud.add_child(ripple2)
+	
+	add_child(mud)
+	cell_visuals[grid_pos] = mud
 
 # Get cell center world coordinates
 func get_cell_world_position(grid_pos: Vector2i) -> Vector2:

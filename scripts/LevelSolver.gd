@@ -73,8 +73,8 @@ static func solve_level(level_data: Dictionary) -> int:
 				if next_pos.x < 0 or next_pos.x >= width or next_pos.y < 0 or next_pos.y >= height:
 					break
 				
-				# Wall check
-				if grid[next_pos.y][next_pos.x] == 1:
+				# Wall or Void check
+				if grid[next_pos.y][next_pos.x] == 1 or grid[next_pos.y][next_pos.x] == 9:
 					break
 					
 				# Detect infinite loops in a single slide step (e.g. portal ping-pong)
@@ -103,6 +103,10 @@ static func solve_level(level_data: Dictionary) -> int:
 				var gem_idx = gem_positions.find(pos)
 				if gem_idx != -1:
 					mask |= (1 << gem_idx)
+					
+				# Mud check
+				if grid[pos.y][pos.x] == 10:
+					break
 					
 				# Check if we slid into the hole
 				if grid[pos.y][pos.x] == 3:

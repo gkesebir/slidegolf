@@ -145,7 +145,7 @@ func slide_to(dir: Vector2i):
 		var next_pos = current + dir
 		var type = grid_manager.get_cell_type(next_pos)
 		
-		if type == 1 or type == -1:
+		if type == 1 or type == 9 or type == -1:
 			break
 			
 		if type == 4:
@@ -172,6 +172,12 @@ func slide_to(dir: Vector2i):
 			if not crossed_fragile_tiles.has(current):
 				crossed_fragile_tiles.append(current)
 				
+		elif type == 10:
+			# Mud: stops slide instantly on entering mud tile
+			current = next_pos
+			path_steps.append({ "pos": current, "teleport": false })
+			break
+			
 		else:
 			current = next_pos
 			path_steps.append({ "pos": current, "teleport": false })

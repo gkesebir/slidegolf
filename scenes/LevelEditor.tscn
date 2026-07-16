@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/LevelEditor.gd" id="1_editor"]
 [ext_resource type="Script" path="res://scripts/GridManager.gd" id="2_grid"]
 
-[node name="LevelEditor" type="Control" node_paths=PackedStringArray("grid_manager", "status_label", "tool_buttons", "save_button", "play_test_button", "back_button")]
+[node name="LevelEditor" type="Control" node_paths=PackedStringArray("grid_manager", "status_label", "tool_buttons", "save_button", "play_test_button", "back_button", "new_level_button", "row_plus_button", "row_minus_button", "col_plus_button", "col_minus_button", "zoom_in_button", "zoom_out_button", "hamburger_button", "sidebar_panel", "sidebar_close_button", "audit_button", "level_list_container", "row_label", "col_label")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -13,10 +13,24 @@ grow_vertical = 2
 script = ExtResource("1_editor")
 grid_manager = NodePath("GridManager")
 status_label = NodePath("UI/BottomBar/StatusLabel")
-tool_buttons = [NodePath("UI/BottomBar/PaletteContainer/WallButton"), NodePath("UI/BottomBar/PaletteContainer/GemButton"), NodePath("UI/BottomBar/PaletteContainer/HoleButton"), NodePath("UI/BottomBar/PaletteContainer/PortalInButton"), NodePath("UI/BottomBar/PaletteContainer/PortalOutButton"), NodePath("UI/BottomBar/PaletteContainer/StartButton"), NodePath("UI/BottomBar/PaletteContainer/GrassButton")]
+tool_buttons = [NodePath("UI/BottomBar/PaletteContainer/GrassButton"), NodePath("UI/BottomBar/PaletteContainer/WallButton"), NodePath("UI/BottomBar/PaletteContainer/VoidButton"), NodePath("UI/BottomBar/PaletteContainer/MudButton"), NodePath("UI/BottomBar/PaletteContainer/GemButton"), NodePath("UI/BottomBar/PaletteContainer/HoleButton"), NodePath("UI/BottomBar/PaletteContainer/PortalInButton"), NodePath("UI/BottomBar/PaletteContainer/PortalOutButton"), NodePath("UI/BottomBar/PaletteContainer/StartButton")]
 save_button = NodePath("UI/BottomBar/ActionsContainer/SaveButton")
 play_test_button = NodePath("UI/BottomBar/ActionsContainer/PlayTestButton")
 back_button = NodePath("UI/BottomBar/ActionsContainer/BackButton")
+new_level_button = NodePath("UI/BottomBar/ActionsContainer/NewLevelButton")
+row_plus_button = NodePath("UI/TopBar/GridControls/RowPlus")
+row_minus_button = NodePath("UI/TopBar/GridControls/RowMinus")
+col_plus_button = NodePath("UI/TopBar/GridControls/ColPlus")
+col_minus_button = NodePath("UI/TopBar/GridControls/ColMinus")
+zoom_in_button = NodePath("UI/TopBar/ZoomControls/ZoomIn")
+zoom_out_button = NodePath("UI/TopBar/ZoomControls/ZoomOut")
+hamburger_button = NodePath("UI/TopBar/HamburgerButton")
+sidebar_panel = NodePath("UI/SidebarPanel")
+sidebar_close_button = NodePath("UI/SidebarPanel/CloseButton")
+audit_button = NodePath("UI/SidebarPanel/AuditButton")
+level_list_container = NodePath("UI/SidebarPanel/ScrollContainer/LevelListContainer")
+row_label = NodePath("UI/TopBar/GridControls/RowLabel")
+col_label = NodePath("UI/TopBar/GridControls/ColLabel")
 
 [node name="Background" type="ColorRect" parent="."]
 layout_mode = 1
@@ -30,14 +44,128 @@ color = Color(0.945098, 0.972549, 0.913725, 1)
 [node name="GridManager" type="Node2D" parent="."]
 script = ExtResource("2_grid")
 
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(540, 960)
+
 [node name="UI" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="Panel" parent="UI"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 140.0
+grow_horizontal = 2
+
+[node name="HamburgerButton" type="Button" parent="UI/TopBar"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 30.0
+offset_top = -45.0
+offset_right = 120.0
+offset_top = -45.0
+offset_bottom = 45.0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 40
+text = "☰"
+
+[node name="GridControls" type="HBoxContainer" parent="UI/TopBar"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -40.0
+offset_right = 210.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="RowLabel" type="Label" parent="UI/TopBar/GridControls"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.18, 0.24, 0.25, 1)
+theme_override_font_sizes/font_size = 22
+text = "Satır: 7"
+vertical_alignment = 1
+
+[node name="RowMinus" type="Button" parent="UI/TopBar/GridControls"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 24
+text = "-"
+
+[node name="RowPlus" type="Button" parent="UI/TopBar/GridControls"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 24
+text = "+"
+
+[node name="VSeparator" type="VSeparator" parent="UI/TopBar/GridControls"]
+layout_mode = 2
+
+[node name="ColLabel" type="Label" parent="UI/TopBar/GridControls"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.18, 0.24, 0.25, 1)
+theme_override_font_sizes/font_size = 22
+text = "Sütun: 7"
+vertical_alignment = 1
+
+[node name="ColMinus" type="Button" parent="UI/TopBar/GridControls"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 24
+text = "-"
+
+[node name="ColPlus" type="Button" parent="UI/TopBar/GridControls"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 24
+text = "+"
+
+[node name="ZoomControls" type="HBoxContainer" parent="UI/TopBar"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -40.0
+offset_right = -30.0
+offset_bottom = 40.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="ZoomOut" type="Button" parent="UI/TopBar/ZoomControls"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 24
+text = "🔍-"
+
+[node name="ZoomIn" type="Button" parent="UI/TopBar/ZoomControls"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 24
+text = "🔍+"
 
 [node name="BottomBar" type="Panel" parent="UI"]
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -480.0
+offset_top = -540.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -49,7 +177,7 @@ offset_top = 20.0
 offset_bottom = 70.0
 grow_horizontal = 2
 theme_override_font_sizes/font_size = 28
-text = "Status: Solvable (Par: 5 moves)"
+text = "Durum: Çözülebilir (Par: 5 Hamle)"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -59,64 +187,78 @@ anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = 40.0
-offset_top = -140.0
-offset_right = -40.0
-offset_bottom = 40.0
+offset_left = 30.0
+offset_top = -180.0
+offset_right = -30.0
+offset_bottom = 30.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/h_separation = 20
-theme_override_constants/v_separation = 20
-columns = 4
-
-[node name="WallButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 24
-text = "WALL"
-
-[node name="GemButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 24
-text = "GEM"
-
-[node name="HoleButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 24
-text = "HOLE"
-
-[node name="PortalInButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 24
-text = "PORTAL IN"
-
-[node name="PortalOutButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 24
-text = "PORTAL OUT"
-
-[node name="StartButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 24
-text = "START"
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+columns = 5
 
 [node name="GrassButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_font_sizes/font_size = 24
-text = "CLEAR"
+theme_override_font_sizes/font_size = 20
+text = "ÇİM"
+
+[node name="WallButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 20
+text = "DUVAR"
+
+[node name="VoidButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 20
+text = "BOŞLUK"
+
+[node name="MudButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 20
+text = "ÇAMUR"
+
+[node name="GemButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 20
+text = "ELMAS"
+
+[node name="HoleButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 20
+text = "DELİK"
+
+[node name="PortalInButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 18
+text = "GEÇİT M."
+
+[node name="PortalOutButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 18
+text = "GEÇİT T."
+
+[node name="StartButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 20
+text = "BAŞLANGIÇ"
 
 [node name="ActionsContainer" type="HBoxContainer" parent="UI/BottomBar"]
 layout_mode = 1
@@ -124,28 +266,95 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 40.0
+offset_left = 30.0
 offset_top = -120.0
-offset_right = -40.0
+offset_right = -30.0
 offset_bottom = -30.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_constants/separation = 20
+theme_override_constants/separation = 15
 
 [node name="SaveButton" type="Button" parent="UI/BottomBar/ActionsContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 28
-text = "SAVE LEVEL"
+theme_override_font_sizes/font_size = 26
+text = "KAYDET"
 
 [node name="PlayTestButton" type="Button" parent="UI/BottomBar/ActionsContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 28
-text = "PLAY TEST"
+theme_override_font_sizes/font_size = 26
+text = "TEST ET"
+
+[node name="NewLevelButton" type="Button" parent="UI/BottomBar/ActionsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 26
+text = "YENİ LEVEL"
 
 [node name="BackButton" type="Button" parent="UI/BottomBar/ActionsContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 26
+text = "GERİ"
+
+[node name="SidebarPanel" type="Panel" parent="UI"]
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_left = -500.0
+offset_right = 0.0
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="UI/SidebarPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 30.0
+offset_bottom = 90.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "SEVİYELER"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="UI/SidebarPanel"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -80.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 80.0
+grow_horizontal = 0
 theme_override_font_sizes/font_size = 28
-text = "BACK"
+text = "X"
+
+[node name="AuditButton" type="Button" parent="UI/SidebarPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 30.0
+offset_top = 110.0
+offset_right = -30.0
+offset_bottom = 180.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 26
+text = "Seviyeleri Denetle"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI/SidebarPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = 210.0
+offset_right = -30.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LevelListContainer" type="VBoxContainer" parent="UI/SidebarPanel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 15
