@@ -8,6 +8,7 @@ class_name GameManager
 
 # UI Nodes
 @export var diamond_label: Label
+@export var move_label: Label
 @export var victory_screen: Control
 @export var restart_button: Button
 
@@ -32,12 +33,14 @@ var shop_buttons: Array[Button] = []
 # Phase 5 Audio UI
 @export var mute_button: CheckButton
 
-# Game state
+# State variables
 var total_diamonds: int = 0
 var diamonds_collected: int = 0
 var current_level_path: String = ""
 var current_level_index: int = 1
 var level_cleared: bool = false
+var current_moves: int = 0
+var target_moves: int = 0
 
 # Phase 3 Bonus Mode state
 var is_bonus_mode: bool = false
@@ -178,6 +181,10 @@ func load_level_from_json(path: String) -> bool:
 	
 	total_diamonds = count_diamonds_in_grid()
 	diamonds_collected = 0
+	current_moves = 0
+	target_moves = level_data.get("min_moves", 0)
+	if target_moves <= 0:
+		target_moves = 9 # Varsayilan (Fall-back) eger cozulmemisse veya min_moves yoksa
 	update_ui()
 	
 	var start_arr = level_data["player_start"]
@@ -201,6 +208,10 @@ func load_level_from_dict(level_data: Dictionary):
 	
 	total_diamonds = count_diamonds_in_grid()
 	diamonds_collected = 0
+	current_moves = 0
+	target_moves = level_data.get("min_moves", 0)
+	if target_moves <= 0:
+		target_moves = 9
 	update_ui()
 	
 	var start_arr = level_data["player_start"]
@@ -215,6 +226,8 @@ func start_bonus_mode():
 	level_cleared = false
 	bonus_time_left = 30.0
 	diamonds_collected = 0
+	current_moves = 0
+	target_moves = 999
 	
 	if restart_button:
 		restart_button.text = "PLAY AGAIN"
@@ -290,12 +303,32 @@ func all_diamonds_collected() -> bool:
 func update_ui():
 	if diamond_label:
 		if is_bonus_mode:
-			diamond_label.text = "TIME-ATTACK | GEMS: %d | WALLET: %d" % [diamonds_collected, SaveManager.gems_wallet]
-		elif current_level_path != "":
-			var level_num = current_level_path.get_file().get_basename().replace("level_", "")
-			diamond_label.text = "LEVEL %s | GEMS: %d / %d | WALLET: %d" % [level_num, diamonds_collected, total_diamonds, SaveManager.gems_wallet]
+			diamond_label.text = "GEMS: %d / %d | BONUS ZAMANI!" % [diamonds_collected, total_diamonds]
 		else:
 			diamond_label.text = "GEMS: %d / %d | WALLET: %d" % [diamonds_collected, total_diamonds, SaveManager.gems_wallet]
+			
+	if move_label:
+		if is_bonus_mode:
+			move_label.visible = false
+		else:
+			move_label.visible = true
+			move_label.text = "%d/%d" % [current_moves, target_moves]
+			
+			if current_moves <= target_moves:
+				move_label.add_theme_color_override("font_color", Color("2e7d32")) # Yesil
+			else:
+				var diff = current_moves - target_moves
+				if diff == 1:
+					move_label.add_theme_color_override("font_color", Color("f57c00")) # Turuncu
+				elif diff == 2:
+					move_label.add_theme_color_override("font_color", Color("e65100")) # Koyu Turuncu
+				else:
+					move_label.add_theme_color_override("font_color", Color("c62828")) # Kirmizi
+
+func increment_move():
+	if not game_over and not level_cleared:
+		current_moves += 1
+		update_ui()
 
 func update_timer_label():
 	if timer_label:

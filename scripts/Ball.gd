@@ -198,6 +198,11 @@ func slide_to(dir: Vector2i):
 			
 	if path_steps.size() > 0:
 		is_moving = true
+		
+		# Hamle sayisini artir
+		if is_instance_valid(game_manager) and game_manager.has_method("increment_move"):
+			game_manager.increment_move()
+			
 		var tween = create_tween().set_parallel(false)
 		
 		# Slide duration scaled by ball's speed factor
