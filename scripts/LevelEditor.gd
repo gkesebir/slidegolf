@@ -156,73 +156,15 @@ func _input(event):
 			_adjust_zoom(-0.05)
 			get_viewport().set_input_as_handled()
 			
-	# Click-to-move / Drag-and-drop handles logic
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed and is_instance_valid(grid_manager):
+	# Tıklama ile boyama / yerleştirme (Sürükleme IPTAL)
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if is_instance_valid(grid_manager):
 			var local_pos = grid_manager.get_local_mouse_position()
 			var gx = floor(local_pos.x / grid_manager.cell_size)
 			var gy = floor(local_pos.y / grid_manager.cell_size)
 			var grid_pos = Vector2i(gx, gy)
 			
-			if gx > 0 and gx < grid_width - 1 and gy > 0 and gy < grid_height - 1:
-				# Clicked start spawn?
-				if grid_pos == player_start:
-					is_dragging_start = true
-					get_viewport().set_input_as_handled()
-				# Clicked goal hole?
-				elif grid_manager.grid[grid_pos.y][grid_pos.x] == 3:
-					is_dragging_hole = true
-					get_viewport().set_input_as_handled()
-		else:
-			if is_dragging_start or is_dragging_hole:
-				is_dragging_start = false
-				is_dragging_hole = false
-				validate_and_update_status()
-				
-	elif event is InputEventMouseMotion and (is_dragging_start or is_dragging_hole) and is_instance_valid(grid_manager):
-		var local_pos = grid_manager.get_local_mouse_position()
-		var gx = floor(local_pos.x / grid_manager.cell_size)
-		var gy = floor(local_pos.y / grid_manager.cell_size)
-		var grid_pos = Vector2i(gx, gy)
-		
-		# Clamp to valid inner boundaries
-		if gx > 0 and gx < grid_width - 1 and gy > 0 and gy < grid_height - 1:
-			if is_dragging_start and grid_pos != player_start:
-				# Cannot spawn ball on top of hole
-				if grid_manager.grid[grid_pos.y][grid_pos.x] != 3:
-					player_start = grid_pos
-					# Make sure target cell itself is empty type 0 (or portal/gem, but not wall)
-					if grid_manager.grid[grid_pos.y][grid_pos.x] == 1 or grid_manager.grid[grid_pos.y][grid_pos.x] == 9:
-						grid_manager.grid[grid_pos.y][grid_pos.x] = 0
-					grid_manager.reset_grid()
-					update_start_marker()
-			elif is_dragging_hole and grid_manager.grid[grid_pos.y][grid_pos.x] != 3:
-				# Cannot place hole on top of start position
-				if grid_pos != player_start:
-					# Clean old hole
-					for y in range(grid_height):
-						for x in range(grid_width):
-							if grid_manager.grid[y][x] == 3:
-								grid_manager.grid[y][x] = 0
-					grid_manager.grid[grid_pos.y][grid_pos.x] = 3
-					grid_manager.reset_grid()
-					update_start_marker()
-					
-	# Handle standard paint strokes
-	elif (event is InputEventMouseButton or event is InputEventMouseMotion) and not (is_dragging_start or is_dragging_hole):
-		var is_pressed = false
-		if event is InputEventMouseButton:
-			if event.button_index == MOUSE_BUTTON_LEFT:
-				is_pressed = event.pressed
-		elif event is InputEventMouseMotion:
-			is_pressed = (event.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0
-			
-		if is_pressed and is_instance_valid(grid_manager):
-			var local_pos = grid_manager.get_local_mouse_position()
-			var gx = floor(local_pos.x / grid_manager.cell_size)
-			var gy = floor(local_pos.y / grid_manager.cell_size)
-			var grid_pos = Vector2i(gx, gy)
-			
+			# İç sınırlara tıklandığından emin ol
 			if gx > 0 and gx < grid_width - 1 and gy > 0 and gy < grid_height - 1:
 				_paint_cell(grid_pos)
 
@@ -232,13 +174,16 @@ func _paint_cell(grid_pos: Vector2i):
 	var current_grid = grid_manager.grid
 	
 	if active_tool == 100:
-		if current_grid[grid_pos.y][grid_pos.x] == 3:
-			return # Enforce spawn cannot cover target hole
+		# Top (Başlangıç) yerleştirme
+		var type = current_grid[grid_pos.y][grid_pos.x]
+		# Duvar (1), Boşluk (9) veya Delik (3) üzerine yerleştirilemez
+		if type == 1 or type == 9 or type == 3:
+			return
 		player_start = grid_pos
-		if current_grid[grid_pos.y][grid_pos.x] != 4 and current_grid[grid_pos.y][grid_pos.x] != 5:
-			current_grid[grid_pos.y][grid_pos.x] = 0
+		# Çim, çamur veya elmas olan yerin zeminini sıfırlamıyoruz!
 	elif active_tool == 3:
-		# Hole
+		# Delik
+		# Sadece 1 tane delik olabilir, eskisini temizle
 		for y in range(grid_height):
 			for x in range(grid_width):
 				if current_grid[y][x] == 3:
@@ -259,9 +204,9 @@ func _paint_cell(grid_pos: Vector2i):
 					current_grid[y][x] = 0
 		current_grid[grid_pos.y][grid_pos.x] = 5
 	else:
-		# Wall, Gem, Void, Mud, Grass
+		# Wall (1), Gem (2), Void (9), Mud (10), Grass (0)
 		if (active_tool == 1 or active_tool == 9) and grid_pos == player_start:
-			return # Spawner cannot be covered by walls or voids
+			return # Topun olduğu yere duvar veya boşluk konulamaz
 		current_grid[grid_pos.y][grid_pos.x] = active_tool
 		
 	if is_instance_valid(grid_manager):
@@ -318,6 +263,7 @@ func update_start_marker():
 		
 	if not start_marker:
 		start_marker = Panel.new()
+		start_marker.z_index = 100 # Top her zaman en üstte görünsün
 		start_marker.size = Vector2(grid_manager.cell_size * 0.5, grid_manager.cell_size * 0.5)
 		start_marker.pivot_offset = start_marker.size / 2.0
 		var style = StyleBoxFlat.new()

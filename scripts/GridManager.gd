@@ -159,6 +159,7 @@ func spawn_wall_visual(grid_pos: Vector2i):
 
 func spawn_diamond_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	var diamond = Control.new()
+	diamond.z_index = 10 # Elmaslarin zemin tarafindan gizlenmesini onle
 	diamond.size = Vector2(cell_size * 0.4, cell_size * 0.4)
 	diamond.position = cell_pos + Vector2(cell_size * 0.3, cell_size * 0.3)
 	
