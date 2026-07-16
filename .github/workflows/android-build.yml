@@ -24,32 +24,30 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Asistanın önerdiği Cache Adımı: Şablonları hafızaya alır, süreyi kısaltır.
       - name: Cache Godot export templates
         uses: actions/cache@v4
         with:
           path: ~/.local/share/godot/export_templates/4.7.stable
-          key: godot-templates-4.7-stable-${{ runner.os }}-v1
+          key: godot-templates-4.7-stable-${{ runner.os }}-v2
           restore-keys: |
             godot-templates-4.7-stable-${{ runner.os }}-
 
-      # Asistanın önerdiği Kaya Gibi Sağlam Kurulum Adımı (Çökmeyen sunucudan indirir)
       - name: Install Godot CLI and Templates
         run: |
           set -euo pipefail
           mkdir -p ~/bin
 
-          # 1. Godot 4.7 Engine İndiriliyor (GitHub'dan güvenli indirme)
+          # 1. Godot 4.7 Engine İndiriliyor
           curl -4 -fSL --retry 5 --retry-delay 5 --retry-connrefused -o Godot_v4.7-stable_linux.x86_64.zip https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
           unzip -q Godot_v4.7-stable_linux.x86_64.zip
           mv Godot_v4.7-stable_linux.x86_64 ~/bin/godot
           rm -f Godot_v4.7-stable_linux.x86_64.zip
 
-          # 2. Klasörler Hazırlanıyor
+          # 2. Şablon klasörlerini temiz ve doğru oluşturuyoruz
           mkdir -p ~/.local/share/godot/export_templates/4.7.stable
           mkdir -p ~/.local/share/godot/templates/4.7.stable
 
-          # 3. Şablonlar İndiriliyor (Önce GitHub'ı dener, çökerse alternatif sunucuya geçer)
+          # 3. Şablonlar indiriliyor
           TEMPLATE_FILE=templates.tpz
           for url in \
             "https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_export_templates.tpz" \
@@ -66,19 +64,24 @@ jobs:
           done
 
           if [ ! -f "$TEMPLATE_FILE" ]; then
-            echo "ERROR: Failed to download Godot export templates from all sources."
+            echo "ERROR: Failed to download Godot export templates."
             exit 1
           fi
 
-          # 4. Şablonlar Klasörlere Açılıyor
+          # 4. Şablonları doğrudan 'templates' klasörünün İÇERİĞİNİ kopyalayacak şekilde açıyoruz
           unzip -q "$TEMPLATE_FILE" -d templates_tmp
-          cp -r templates_tmp/* ~/.local/share/godot/export_templates/4.7.stable/
-          cp -r templates_tmp/* ~/.local/share/godot/templates/4.7.stable/
+          
+          # İçerideki 'templates/' alt klasörünün altındaki dosyaları doğrudan kopyalıyoruz!
+          cp -r templates_tmp/templates/* ~/.local/share/godot/export_templates/4.7.stable/
+          cp -r templates_tmp/templates/* ~/.local/share/godot/templates/4.7.stable/
+          
           rm -rf templates_tmp "$TEMPLATE_FILE"
 
       - name: Verify Godot Installation
         run: |
           ~/bin/godot --version
+          # Klasörün gerçekten dolduğunu ve şablonların orada olduğunu doğrulayalım
+          ls -la ~/.local/share/godot/export_templates/4.7.stable/
 
       - name: Export Android APK
         env:
