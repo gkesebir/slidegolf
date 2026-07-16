@@ -47,6 +47,10 @@ var is_bonus_mode: bool = false
 var bonus_time_left: float = 30.0
 var game_over: bool = false
 
+# Ad System State
+var last_ad_time_msec: int = 0
+var levels_cleared_since_ad: int = 0
+
 # Phase 4 Shop pricing
 const BALL_PRICES = {
 	"standard": 0,
@@ -55,6 +59,8 @@ const BALL_PRICES = {
 }
 
 func _ready():
+	last_ad_time_msec = Time.get_ticks_msec()
+	
 	if not grid_manager:
 		grid_manager = get_node_or_null("../GridManager")
 	if not ball:
@@ -302,10 +308,14 @@ func all_diamonds_collected() -> bool:
 
 func update_ui():
 	if diamond_label:
+		var level_str = ""
+		if current_level_index > 0 and not is_bonus_mode:
+			level_str = "SEVİYE %d | " % current_level_index
+			
 		if is_bonus_mode:
-			diamond_label.text = "GEMS: %d / %d | BONUS ZAMANI!" % [diamonds_collected, total_diamonds]
+			diamond_label.text = "BONUS ZAMANI! | 💎 %d / %d" % [diamonds_collected, total_diamonds]
 		else:
-			diamond_label.text = "GEMS: %d / %d | WALLET: %d" % [diamonds_collected, total_diamonds, SaveManager.gems_wallet]
+			diamond_label.text = "%s💎 %d / %d | 🪙 %d" % [level_str, diamonds_collected, total_diamonds, SaveManager.gems_wallet]
 			
 	if move_label:
 		if is_bonus_mode:
@@ -339,27 +349,47 @@ func win_level():
 	level_cleared = true
 	AudioController.play_victory()
 	
-	# Add collected gems to the persistent wallet
-	SaveManager.add_gems(diamonds_collected)
+	# Akilli Odul Sistemi (Smart Reward)
+	var reward = diamonds_collected
+	if current_moves > target_moves:
+		var diff = current_moves - target_moves
+		if diff <= 2:
+			reward = max(1, int(reward / 2))
+		else:
+			reward = min(1, reward)
+			
+	SaveManager.add_gems(reward)
 	update_ui()
+	
+	levels_cleared_since_ad += 1
 	
 	if restart_button:
 		var next_index = current_level_index + 1
 		if next_index > 50:
 			next_index = 1
-		restart_button.text = "NEXT LEVEL (Level %d)" % next_index
+		restart_button.text = "SONRAKİ BÖLÜM (Seviye %d)" % next_index
 	
+	check_and_show_ad()
+
+func show_victory_screen():
 	if victory_screen:
 		victory_screen.show()
 		
 		var title_label = victory_screen.get_node_or_null("Panel/VictoryLabel")
 		if title_label:
-			title_label.text = "LEVEL CLEARED!"
+			title_label.text = "BÖLÜM GEÇİLDİ!"
 			title_label.add_theme_color_override("font_color", Color("ff007f"))
 			
 		var info_label = victory_screen.get_node_or_null("Panel/InfoLabel")
 		if info_label:
-			info_label.text = "Gems Collected: %d\nTotal Wallet: %d" % [diamonds_collected, SaveManager.gems_wallet]
+			info_label.text = "Kazanılan Elmas: %d\nToplam Cüzdan: %d" % [diamonds_collected, SaveManager.gems_wallet]
+			if current_moves > target_moves:
+				var ceza = diamonds_collected
+				if (current_moves - target_moves) <= 2:
+					ceza = ceza - max(1, int(ceza / 2))
+				else:
+					ceza = ceza - min(1, ceza)
+				info_label.text += "\n(Hamle Aşımı Nedeniyle Eksik Ödül)"
 			
 		var panel = victory_screen.get_node_or_null("Panel")
 		if panel:
@@ -367,6 +397,22 @@ func win_level():
 			panel.pivot_offset = panel.size / 2.0
 			var tween = create_tween()
 			tween.tween_property(panel, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func check_and_show_ad():
+	var current_time = Time.get_ticks_msec()
+	var time_diff_sec = (current_time - last_ad_time_msec) / 1000.0
+	
+	if time_diff_sec >= 180.0 or levels_cleared_since_ad >= 5:
+		var ad_screen = get_node_or_null("../UI/AdScreen")
+		if ad_screen:
+			ad_screen.show()
+			ad_screen.start_ad_timer()
+			last_ad_time_msec = Time.get_ticks_msec()
+			levels_cleared_since_ad = 0
+		else:
+			show_victory_screen()
+	else:
+		show_victory_screen()
 
 func _on_restart_button_pressed():
 	if is_bonus_mode:
@@ -515,31 +561,29 @@ func generate_and_save_50_levels():
 			
 	var count = 0
 	var attempts = 0
-	var max_attempts = 1500
+	var max_attempts = 5000 # Increased because complex levels are harder to generate
 	
 	while count < 50 and attempts < max_attempts:
 		attempts += 1
-		var level = LevelGenerator.generate_level(7, 7, 7, 3)
+		var level = LevelGenerator.generate_level_for_index(count + 1)
 		if level.is_empty():
 			continue
 			
-		var moves = LevelSolver.solve_level(level)
-		if moves > 0:
-			level["min_moves"] = moves
-			count += 1
+		var moves = level["min_moves"] # It's already calculated in the generator
+		count += 1
+		
+		var path = "res://levels/level_%d.json" % count
+		var file = FileAccess.open(path, FileAccess.WRITE)
+		if file:
+			var json_str = JSON.stringify(level, "\t")
+			file.store_string(json_str)
+			file.close()
 			
-			var path = "res://levels/level_%d.json" % count
-			var file = FileAccess.open(path, FileAccess.WRITE)
-			if file:
-				var json_str = JSON.stringify(level, "\t")
-				file.store_string(json_str)
-				file.close()
-				
-			if debug_status_label:
-				debug_status_label.text = "Generated: %d/50 (Par: %d)" % [count, moves]
-				
-			if count % 2 == 0:
-				await get_tree().process_frame
+		if debug_status_label:
+			debug_status_label.text = "Generated: %d/50 (Par: %d)" % [count, moves]
+			
+		if count % 2 == 0:
+			await get_tree().process_frame
 				
 	if generate_levels_button:
 		generate_levels_button.disabled = false

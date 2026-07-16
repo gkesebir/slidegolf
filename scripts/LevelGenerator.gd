@@ -2,50 +2,79 @@ extends RefCounted
 
 class_name LevelGenerator
 
-# Generates a random level grid
-# returns a Dictionary containing grid size, start position, objects and the matrix grid.
-static func generate_level(width: int, height: int, wall_count: int, gem_count: int) -> Dictionary:
+# level_index (1'den 50'ye kadar)
+static func generate_level_for_index(level_index: int) -> Dictionary:
+	var width = int(clamp(7 + floor((level_index - 1) / 8), 7, 12))
+	var height = int(clamp(7 + floor((level_index - 1) / 6), 7, 15))
+	
+	var wall_count = int(clamp(7 + floor(level_index / 2.0), 7, 30))
+	var gem_count = int(clamp(3 + floor(level_index / 10.0), 3, 8))
+	var mud_count = int(floor(level_index / 4.0)) if level_index > 10 else 0
+	
+	var portal_chance = 0.0
+	if level_index >= 15:
+		portal_chance = min(0.3 + (level_index - 15) * 0.02, 0.8)
+	elif level_index >= 5:
+		portal_chance = 0.15
+		
+	var target_min_moves = int(clamp(4 + floor(level_index / 4.0), 4, 15))
+	
+	return generate_complex_level(width, height, wall_count, gem_count, mud_count, portal_chance, target_min_moves)
+
+static func generate_complex_level(width: int, height: int, wall_count: int, gem_count: int, mud_count: int, portal_chance: float, target_min_moves: int) -> Dictionary:
 	var attempts = 0
-	var max_attempts = 100
+	var max_attempts = 150
 	
 	while attempts < max_attempts:
 		attempts += 1
 		
-		# Initialize the grid with walls on the border and empty cells inside
+		# Initialize the grid with walls (1)
 		var grid = []
 		for y in range(height):
 			var row = []
 			for x in range(width):
-				if x == 0 or x == width - 1 or y == 0 or y == height - 1:
-					row.append(1) # Wall
-				else:
-					row.append(0) # Empty
+				row.append(1)
 			grid.append(row)
 			
-		# Find all available inner positions
+		# Carve inner space (0)
+		# To create complex shapes, we randomly carve out blocks, or just carve the center and leave some borders as Void (9)
+		for y in range(1, height - 1):
+			for x in range(1, width - 1):
+				grid[y][x] = 0
+				
+		# Add Voids (9) to make non-square shapes (L-shapes, missing corners)
+		if width > 8 and height > 8:
+			var corners = [[1, 1], [1, height-2], [width-2, 1], [width-2, height-2]]
+			corners.shuffle()
+			var void_corners = randi() % 3 # 0 to 2 corners voided
+			for i in range(void_corners):
+				var cx = corners[i][0]
+				var cy = corners[i][1]
+				var void_w = 2 + randi() % 3
+				var void_h = 2 + randi() % 3
+				for vy in range(void_h):
+					for vx in range(void_w):
+						var nx = cx + (vx if cx == 1 else -vx)
+						var ny = cy + (vy if cy == 1 else -vy)
+						if nx >= 1 and nx < width - 1 and ny >= 1 and ny < height - 1:
+							grid[ny][nx] = 9 # Void
+			
 		var available_positions: Array[Vector2i] = []
 		for y in range(1, height - 1):
 			for x in range(1, width - 1):
-				available_positions.append(Vector2i(x, y))
-				
-		# Shuffle positions to pick random unique coordinates
-		randomize()
+				if grid[y][x] == 0:
+					available_positions.append(Vector2i(x, y))
+					
 		available_positions.shuffle()
 		
-		# We decide to generate a portal with 35% probability
-		var generate_portal = (randf() < 0.35)
-		var portal_cells = 2 if generate_portal else 0
-		
-		# Check if we have enough empty space
-		var required_cells = 1 + 1 + wall_count + gem_count + portal_cells # Start + Hole + Walls + Gems + Portals
+		var generate_portal = (randf() < portal_chance)
+		var required_cells = 1 + 1 + wall_count + gem_count + mud_count + (2 if generate_portal else 0)
 		if available_positions.size() < required_cells:
-			continue # Try again or adjust size
+			continue
 			
-		# Pop positions from the shuffled list
 		var player_start = available_positions.pop_back()
 		var hole = available_positions.pop_back()
 		
-		# Place portals if requested
 		var portal_in: Vector2i = Vector2i(-1, -1)
 		var portal_out: Vector2i = Vector2i(-1, -1)
 		if generate_portal:
@@ -54,28 +83,29 @@ static func generate_level(width: int, height: int, wall_count: int, gem_count: 
 			grid[portal_in.y][portal_in.x] = 4
 			grid[portal_out.y][portal_out.x] = 5
 			
-		# Place walls
 		var walls: Array[Vector2i] = []
 		for i in range(wall_count):
-			var wall_pos = available_positions.pop_back()
-			walls.append(wall_pos)
-			grid[wall_pos.y][wall_pos.x] = 1
+			var pos = available_positions.pop_back()
+			walls.append(pos)
+			grid[pos.y][pos.x] = 1
 			
-		# Place gems
 		var gems: Array[Vector2i] = []
 		for i in range(gem_count):
-			var gem_pos = available_positions.pop_back()
-			gems.append(gem_pos)
-			grid[gem_pos.y][gem_pos.x] = 2
+			var pos = available_positions.pop_back()
+			gems.append(pos)
+			grid[pos.y][pos.x] = 2
 			
-		# Place hole
+		var muds: Array[Vector2i] = []
+		for i in range(mud_count):
+			var pos = available_positions.pop_back()
+			muds.append(pos)
+			grid[pos.y][pos.x] = 10
+			
 		grid[hole.y][hole.x] = 3
 		
-		# Format coordinates for JSON output
 		var walls_json = []
 		for w in walls:
 			walls_json.append([w.x, w.y])
-			
 		var gems_json = []
 		for g in gems:
 			gems_json.append([g.x, g.y])
@@ -92,36 +122,14 @@ static func generate_level(width: int, height: int, wall_count: int, gem_count: 
 			"min_moves": -1
 		}
 		
-		# Add portals to objects definition if they were generated
 		if generate_portal:
 			level_data["objects"]["portal_in"] = [portal_in.x, portal_in.y]
 			level_data["objects"]["portal_out"] = [portal_out.x, portal_out.y]
 			
-		# Validate the level is solvable using LevelSolver
+		# Enforce difficulty scaling: verify min_moves is close to target_min_moves
 		var moves = LevelSolver.solve_level(level_data)
-		if moves > 0:
+		if moves > 0 and moves >= target_min_moves - 3:
 			level_data["min_moves"] = moves
 			return level_data
 			
-	# If we exceed max_attempts, return fallback solvable layout
-	printerr("LevelGenerator: Failed to generate a solvable level in ", max_attempts, " attempts. Returning fallback layout.")
-	var fallback_grid = [
-		[1, 1, 1, 1, 1, 1, 1],
-		[1, 0, 2, 0, 0, 0, 1],
-		[1, 0, 1, 0, 1, 0, 1],
-		[1, 2, 0, 0, 0, 2, 1],
-		[1, 0, 1, 0, 1, 0, 1],
-		[1, 0, 0, 0, 0, 3, 1],
-		[1, 1, 1, 1, 1, 1, 1]
-	]
-	return {
-		"grid_size": [7, 7],
-		"player_start": [1, 1],
-		"objects": {
-			"walls": [[2, 2], [4, 2], [2, 4], [4, 4]],
-			"gems": [[2, 1], [1, 3], [5, 3]],
-			"hole": [5, 5]
-		},
-		"grid": fallback_grid,
-		"min_moves": 4
-	}
+	return {}
