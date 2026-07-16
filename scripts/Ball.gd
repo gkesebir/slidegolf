@@ -27,20 +27,20 @@ const BALL_PROFILES = {
 	"standard": {
 		"name": "Standart Top",
 		"speed_factor": 1.0,
-		"color": Color("ffffff"),
-		"glow_color": Color("00e5ff")
+		"color": Color("f5f5f5"),
+		"glow_color": Color("cfd8dc")
 	},
 	"iron": {
 		"name": "Demir Top",
 		"speed_factor": 1.6, # Slower acceleration / slide
-		"color": Color("90a4ae"),
-		"glow_color": Color("cfd8dc")
+		"color": Color("455a64"),
+		"glow_color": Color("78909c")
 	},
 	"super": {
 		"name": "Süper Top",
 		"speed_factor": 0.6, # Ultra fast slide
-		"color": Color("ff007f"),
-		"glow_color": Color("ff007f")
+		"color": Color("ff4081"),
+		"glow_color": Color("ff80ab")
 	}
 }
 
@@ -73,9 +73,17 @@ func apply_ball_profile(profile_id: String):
 	queue_redraw()
 
 func _draw():
-	draw_circle(Vector2.ZERO, radius + 4, Color(glow_color.r, glow_color.g, glow_color.b, 0.3))
+	# 1. Drop shadow shifted down-right
+	draw_circle(Vector2(4, 8), radius, Color(0, 0, 0, 0.15))
+	
+	# 2. Outer rim glow
+	draw_circle(Vector2.ZERO, radius + 2, Color(glow_color.r, glow_color.g, glow_color.b, 0.25))
+	
+	# 3. Main ball body
 	draw_circle(Vector2.ZERO, radius, ball_color)
-	draw_arc(Vector2.ZERO, radius, 0, TAU, 32, glow_color, 2.5, true)
+	
+	# 4. Minimalist specular reflection highlight
+	draw_circle(Vector2(-radius * 0.35, -radius * 0.35), radius * 0.25, Color(1, 1, 1, 0.4))
 
 func _input(event):
 	if is_moving:

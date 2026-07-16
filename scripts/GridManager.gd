@@ -53,20 +53,15 @@ func setup_grid():
 func create_cell_visual(grid_pos: Vector2i, type: int):
 	var cell_pos = Vector2(grid_pos.x * cell_size, grid_pos.y * cell_size)
 	
-	# Draw background for all non-wall tiles
-	if type != 1:
-		var path_rect = ColorRect.new()
-		path_rect.size = Vector2(cell_size - 4, cell_size - 4)
-		path_rect.position = cell_pos + Vector2(2, 2)
-		path_rect.color = Color("1a1c23") # Sleek dark background
-		add_child(path_rect)
-		
-		var border = ReferenceRect.new()
-		border.size = path_rect.size
-		border.position = path_rect.position
-		border.border_color = Color("2e3440")
-		border.border_width = 1.0
-		add_child(border)
+	# Draw checkerboard background for all cells
+	var bg_rect = ColorRect.new()
+	bg_rect.size = Vector2(cell_size, cell_size)
+	bg_rect.position = cell_pos
+	if (grid_pos.x + grid_pos.y) % 2 == 0:
+		bg_rect.color = Color("a1d59b") # Light pastel green
+	else:
+		bg_rect.color = Color("87c380") # Darker pastel green
+	add_child(bg_rect)
 	
 	# 1. Wall (1)
 	if type == 1:
@@ -82,11 +77,11 @@ func create_cell_visual(grid_pos: Vector2i, type: int):
 		
 	# 4. PortalIn (4)
 	elif type == 4:
-		spawn_portal_visual(grid_pos, cell_pos, Color("ff6d00"), "PortalIn")
+		spawn_portal_visual(grid_pos, cell_pos, Color("29b6f6"), "PortalIn")
 		
 	# 5. PortalOut (5)
 	elif type == 5:
-		spawn_portal_visual(grid_pos, cell_pos, Color("00b0ff"), "PortalOut")
+		spawn_portal_visual(grid_pos, cell_pos, Color("ffb74d"), "PortalOut")
 		
 	# 6. Button (6)
 	elif type == 6:
@@ -104,40 +99,87 @@ func create_cell_visual(grid_pos: Vector2i, type: int):
 
 func spawn_wall_visual(grid_pos: Vector2i):
 	var cell_pos = Vector2(grid_pos.x * cell_size, grid_pos.y * cell_size)
-	var wall_panel = Panel.new()
-	wall_panel.size = Vector2(cell_size - 6, cell_size - 6)
-	wall_panel.position = cell_pos + Vector2(3, 3)
 	
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color("2b303c")
-	style.border_color = Color("00e5ff") # Glowing Cyan
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.corner_radius_top_left = 12
-	style.corner_radius_top_right = 12
-	style.corner_radius_bottom_left = 12
-	style.corner_radius_bottom_right = 12
-	style.shadow_color = Color("00e5ff", 0.25)
-	style.shadow_size = 4
+	# Wall Container Node
+	var wall = Control.new()
+	wall.size = Vector2(cell_size, cell_size)
+	wall.position = cell_pos
 	
-	wall_panel.add_theme_stylebox_override("panel", style)
-	add_child(wall_panel)
-	cell_visuals[grid_pos] = wall_panel
+	# Drop Shadow under the block
+	var shadow = Panel.new()
+	shadow.size = Vector2(cell_size - 8, cell_size - 8)
+	shadow.position = Vector2(4, 12)
+	var shadow_style = StyleBoxFlat.new()
+	shadow_style.bg_color = Color(0, 0, 0, 0.12)
+	shadow_style.corner_radius_top_left = 12
+	shadow_style.corner_radius_top_right = 12
+	shadow_style.corner_radius_bottom_left = 12
+	shadow_style.corner_radius_bottom_right = 12
+	shadow.add_theme_stylebox_override("panel", shadow_style)
+	wall.add_child(shadow)
+	
+	# 3D Depth (Bottom face)
+	var depth_panel = Panel.new()
+	depth_panel.size = Vector2(cell_size - 6, cell_size - 6)
+	depth_panel.position = Vector2(3, 3)
+	var depth_style = StyleBoxFlat.new()
+	depth_style.bg_color = Color("5d4037") # Dark pastel brown
+	depth_style.corner_radius_top_left = 12
+	depth_style.corner_radius_top_right = 12
+	depth_style.corner_radius_bottom_left = 12
+	depth_style.corner_radius_bottom_right = 12
+	depth_panel.add_theme_stylebox_override("panel", depth_style)
+	wall.add_child(depth_panel)
+	
+	# Top Face
+	var top_panel = Panel.new()
+	top_panel.size = Vector2(cell_size - 6, cell_size - 16)
+	top_panel.position = Vector2(3, 3)
+	var top_style = StyleBoxFlat.new()
+	top_style.bg_color = Color("795548") # Light pastel brown
+	top_style.border_color = Color("8d6e63")
+	top_style.border_width_left = 2
+	top_style.border_width_right = 2
+	top_style.border_width_top = 2
+	top_style.border_width_bottom = 2
+	top_style.corner_radius_top_left = 12
+	top_style.corner_radius_top_right = 12
+	top_style.corner_radius_bottom_left = 10
+	top_style.corner_radius_bottom_right = 10
+	top_panel.add_theme_stylebox_override("panel", top_style)
+	wall.add_child(top_panel)
+	
+	add_child(wall)
+	cell_visuals[grid_pos] = wall
 
 func spawn_diamond_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	var diamond = Control.new()
 	diamond.size = Vector2(cell_size * 0.4, cell_size * 0.4)
 	diamond.position = cell_pos + Vector2(cell_size * 0.3, cell_size * 0.3)
 	
+	# Drop Shadow under the diamond
+	var shadow = Panel.new()
+	shadow.size = diamond.size
+	shadow.position = Vector2(4, 10)
+	shadow.pivot_offset = diamond.size / 2.0
+	shadow.rotation = deg_to_rad(45)
+	var shadow_style = StyleBoxFlat.new()
+	shadow_style.bg_color = Color(0, 0, 0, 0.12)
+	shadow_style.corner_radius_top_left = 4
+	shadow_style.corner_radius_top_right = 4
+	shadow_style.corner_radius_bottom_left = 4
+	shadow_style.corner_radius_bottom_right = 4
+	shadow.add_theme_stylebox_override("panel", shadow_style)
+	diamond.add_child(shadow)
+	
+	# Diamond Body
 	var inner_panel = Panel.new()
 	inner_panel.size = diamond.size
 	inner_panel.pivot_offset = diamond.size / 2.0
 	inner_panel.rotation = deg_to_rad(45)
 	
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color("39ff14") # Neon green
+	style.bg_color = Color("4fc3f7") # Light pastel blue
 	style.border_color = Color("ffffff")
 	style.border_width_left = 2
 	style.border_width_right = 2
@@ -147,8 +189,8 @@ func spawn_diamond_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	style.corner_radius_top_right = 4
 	style.corner_radius_bottom_left = 4
 	style.corner_radius_bottom_right = 4
-	style.shadow_color = Color("39ff14", 0.5)
-	style.shadow_size = 8
+	style.shadow_color = Color("4fc3f7", 0.3)
+	style.shadow_size = 6
 	
 	inner_panel.add_theme_stylebox_override("panel", style)
 	diamond.add_child(inner_panel)
@@ -165,35 +207,65 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	hole.size = Vector2(h_size, h_size)
 	hole.position = cell_pos + Vector2((cell_size - h_size)/2.0, (cell_size - h_size)/2.0)
 	
+	# Drop Shadow under the hole cup
+	var shadow = Panel.new()
+	shadow.size = hole.size
+	shadow.position = Vector2(2, 6)
+	var shadow_style = StyleBoxFlat.new()
+	shadow_style.bg_color = Color(0, 0, 0, 0.15)
+	shadow_style.corner_radius_top_left = h_size / 2.0
+	shadow_style.corner_radius_top_right = h_size / 2.0
+	shadow_style.corner_radius_bottom_left = h_size / 2.0
+	shadow_style.corner_radius_bottom_right = h_size / 2.0
+	shadow.add_theme_stylebox_override("panel", shadow_style)
+	add_child(shadow)
+	
+	# Hole Cup Rim & Center
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color("05050d") # Deep dark cup center
-	style.border_color = Color("ffffff") # White rim/cup edge
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.border_width_top = 3
-	style.border_width_bottom = 3
+	style.bg_color = Color("1a1a24") # Dark hole cup center
+	style.border_color = Color("78909c") # Sleek metallic gray rim
+	style.border_width_left = 4
+	style.border_width_right = 4
+	style.border_width_top = 4
+	style.border_width_bottom = 4
 	style.corner_radius_top_left = h_size / 2.0
 	style.corner_radius_top_right = h_size / 2.0
 	style.corner_radius_bottom_left = h_size / 2.0
 	style.corner_radius_bottom_right = h_size / 2.0
-	style.shadow_color = Color("ffffff", 0.25)
-	style.shadow_size = 4
 	hole.add_theme_stylebox_override("panel", style)
 	add_child(hole)
 	
-	# Add a white flagpole stick inside the hole
+	# Flagpole shadow (shifted slightly right/down)
+	var stick_shadow = ColorRect.new()
+	stick_shadow.size = Vector2(4, h_size * 0.7)
+	stick_shadow.position = Vector2(h_size / 2.0 + 2, h_size * 0.22)
+	stick_shadow.color = Color(0, 0, 0, 0.15)
+	hole.add_child(stick_shadow)
+	
+	# Flag shadow (shifted slightly right/down)
+	var flag_shadow = Panel.new()
+	flag_shadow.size = Vector2(20, 14)
+	flag_shadow.position = Vector2(h_size / 2.0 + 6, h_size * 0.22)
+	var fs = StyleBoxFlat.new()
+	fs.bg_color = Color(0, 0, 0, 0.15)
+	fs.corner_radius_top_right = 4
+	fs.corner_radius_bottom_right = 4
+	flag_shadow.add_theme_stylebox_override("panel", fs)
+	hole.add_child(flag_shadow)
+	
+	# Actual flagpole stick
 	var stick = ColorRect.new()
 	stick.size = Vector2(4, h_size * 0.7)
 	stick.position = Vector2(h_size / 2.0 - 2, h_size * 0.15)
 	stick.color = Color("ffffff")
 	hole.add_child(stick)
 	
-	# Add a bright red flag at the top of the stick
+	# Actual red flag
 	var flag = Panel.new()
 	flag.size = Vector2(20, 14)
 	flag.position = Vector2(h_size / 2.0 + 2, h_size * 0.15)
 	var flag_style = StyleBoxFlat.new()
-	flag_style.bg_color = Color("ff1744") # Neon red flag
+	flag_style.bg_color = Color("ef5350") # Pastel red
 	flag_style.corner_radius_top_right = 4
 	flag_style.corner_radius_bottom_right = 4
 	flag.add_theme_stylebox_override("panel", flag_style)
@@ -201,33 +273,78 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	
 	hole_node = hole
 
-func spawn_portal_visual(grid_pos: Vector2i, cell_pos: Vector2, color: Color, _name: String):
-	var portal = Panel.new()
-	var p_size = cell_size * 0.55
-	portal.size = Vector2(p_size, p_size)
-	portal.position = cell_pos + Vector2((cell_size - p_size)/2.0, (cell_size - p_size)/2.0)
-	portal.pivot_offset = portal.size / 2.0
+func spawn_portal_visual(grid_pos: Vector2i, cell_pos: Vector2, water_color: Color, _name: String):
+	var well = Control.new()
+	var p_size = cell_size * 0.65
+	well.size = Vector2(p_size, p_size)
+	well.position = cell_pos + Vector2((cell_size - p_size)/2.0, (cell_size - p_size)/2.0)
 	
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color("0d0d1b")
-	style.border_color = color
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.corner_radius_top_left = p_size / 2.0
-	style.corner_radius_top_right = p_size / 2.0
-	style.corner_radius_bottom_left = p_size / 2.0
-	style.corner_radius_bottom_right = p_size / 2.0
-	style.shadow_color = Color(color, 0.4)
-	style.shadow_size = 8
+	# Drop Shadow under the well
+	var shadow = Panel.new()
+	shadow.size = well.size
+	shadow.position = Vector2(2, 6)
+	var shadow_style = StyleBoxFlat.new()
+	shadow_style.bg_color = Color(0, 0, 0, 0.15)
+	shadow_style.corner_radius_top_left = p_size / 2.0
+	shadow_style.corner_radius_top_right = p_size / 2.0
+	shadow_style.corner_radius_bottom_left = p_size / 2.0
+	shadow_style.corner_radius_bottom_right = p_size / 2.0
+	shadow.add_theme_stylebox_override("panel", shadow_style)
+	well.add_child(shadow)
 	
-	portal.add_theme_stylebox_override("panel", style)
-	add_child(portal)
+	# Stone Well Rim
+	var rim = Panel.new()
+	rim.size = well.size
+	var rim_style = StyleBoxFlat.new()
+	rim_style.bg_color = Color("78909c") # Dark slate/stone gray
+	rim_style.border_color = Color("b0bec5") # Light stone gray border
+	rim_style.border_width_left = 6
+	rim_style.border_width_right = 6
+	rim_style.border_width_top = 6
+	rim_style.border_width_bottom = 6
+	rim_style.corner_radius_top_left = p_size / 2.0
+	rim_style.corner_radius_top_right = p_size / 2.0
+	rim_style.corner_radius_bottom_left = p_size / 2.0
+	rim_style.corner_radius_bottom_right = p_size / 2.0
+	rim.add_theme_stylebox_override("panel", rim_style)
+	well.add_child(rim)
 	
-	# Add spin animation for portal feel
+	# Water inside the well
+	var water = Panel.new()
+	var w_size = p_size - 12
+	water.size = Vector2(w_size, w_size)
+	water.position = Vector2(6, 6)
+	var water_style = StyleBoxFlat.new()
+	water_style.bg_color = water_color
+	water_style.corner_radius_top_left = w_size / 2.0
+	water_style.corner_radius_top_right = w_size / 2.0
+	water_style.corner_radius_bottom_left = w_size / 2.0
+	water_style.corner_radius_bottom_right = w_size / 2.0
+	water.add_theme_stylebox_override("panel", water_style)
+	well.add_child(water)
+	
+	# Water reflection overlay
+	var reflection = Panel.new()
+	var r_size = w_size * 0.7
+	reflection.size = Vector2(r_size, r_size)
+	reflection.position = Vector2((w_size - r_size)/2.0, (w_size - r_size)/2.0)
+	reflection.pivot_offset = reflection.size / 2.0
+	var refl_style = StyleBoxFlat.new()
+	refl_style.bg_color = Color(1, 1, 1, 0.15)
+	refl_style.corner_radius_top_left = r_size / 2.0
+	refl_style.corner_radius_top_right = r_size / 2.0
+	refl_style.corner_radius_bottom_left = r_size / 2.0
+	refl_style.corner_radius_bottom_right = r_size / 2.0
+	reflection.add_theme_stylebox_override("panel", refl_style)
+	water.add_child(reflection)
+	
+	add_child(well)
+	cell_visuals[grid_pos] = well
+	
+	# Animate the water reflection (gentle rotation & scale pulse)
 	var tween = create_tween().set_loops()
-	tween.tween_property(portal, "rotation", deg_to_rad(360), 2.5).from(0.0)
+	tween.tween_property(reflection, "scale", Vector2(1.15, 1.15), 1.8).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(reflection, "scale", Vector2(0.9, 0.9), 1.8).set_trans(Tween.TRANS_SINE)
 
 func spawn_button_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	var button = Panel.new()

@@ -377,34 +377,33 @@ func update_item_button_state(btn: Button, ball_id: String):
 	if is_equipped:
 		btn.text = "EQUIPPED"
 		btn.disabled = true
-		# Faded styling
 		var style = btn.get_theme_stylebox("normal").duplicate()
-		style.bg_color = Color("1a242c")
-		style.border_color = Color("00e5ff", 0.5)
+		style.bg_color = Color("cfd8dc") # Pastel gray disabled
+		style.border_color = Color("90a4ae")
 		style.shadow_size = 0
 		btn.add_theme_stylebox_override("normal", style)
-		btn.add_theme_color_override("font_color", Color("00e5ff", 0.5))
+		btn.add_theme_color_override("font_color", Color("78909c"))
 	elif is_unlocked:
 		btn.text = "EQUIP"
 		btn.disabled = false
 		var style = btn.get_theme_stylebox("normal").duplicate()
-		style.bg_color = Color("1c1e26")
-		style.border_color = Color("00e5ff")
-		style.shadow_color = Color("00e5ff", 0.2)
-		style.shadow_size = 4
+		style.bg_color = Color("ffffff")
+		style.border_color = Color("29b6f6") # Pastel blue
+		style.shadow_color = Color("29b6f6", 0.1)
+		style.shadow_size = 3
 		btn.add_theme_stylebox_override("normal", style)
-		btn.add_theme_color_override("font_color", Color("00e5ff"))
+		btn.add_theme_color_override("font_color", Color("0288d1"))
 	else:
 		var price = BALL_PRICES.get(ball_id, 0)
 		btn.text = "BUY: %d GEMS" % price
 		btn.disabled = false
 		var style = btn.get_theme_stylebox("normal").duplicate()
-		style.bg_color = Color("1c1e26")
-		style.border_color = Color("ff9100") # Amber
-		style.shadow_color = Color("ff9100", 0.2)
-		style.shadow_size = 4
+		style.bg_color = Color("ffffff")
+		style.border_color = Color("ffb74d") # Pastel orange
+		style.shadow_color = Color("ffb74d", 0.1)
+		style.shadow_size = 3
 		btn.add_theme_stylebox_override("normal", style)
-		btn.add_theme_color_override("font_color", Color("ff9100"))
+		btn.add_theme_color_override("font_color", Color("f57c00"))
 
 func show_shop_status(msg: String, color: Color):
 	if shop_status_label:
@@ -475,12 +474,18 @@ func generate_and_save_50_levels():
 # --- Procedural UI Styling ---
 
 func style_ui():
+	# Override TopBar labels for minimalist look
+	if diamond_label:
+		diamond_label.add_theme_color_override("font_color", Color("37474f")) # Dark slate gray
+	if timer_label:
+		timer_label.add_theme_color_override("font_color", Color("c62828")) # Pastel red
+
 	# 1. Victory Panel
 	var panel = victory_screen.get_node_or_null("Panel") if victory_screen else null
 	if panel:
 		var panel_style = StyleBoxFlat.new()
-		panel_style.bg_color = Color("12141c")
-		panel_style.border_color = Color("ff007f")
+		panel_style.bg_color = Color("ffffff") # Minimalist white
+		panel_style.border_color = Color("81c784") # Pastel Green
 		panel_style.border_width_left = 4
 		panel_style.border_width_right = 4
 		panel_style.border_width_top = 4
@@ -489,15 +494,23 @@ func style_ui():
 		panel_style.corner_radius_top_right = 24
 		panel_style.corner_radius_bottom_left = 24
 		panel_style.corner_radius_bottom_right = 24
-		panel_style.shadow_color = Color("ff007f", 0.3)
-		panel_style.shadow_size = 15
+		panel_style.shadow_color = Color(0, 0, 0, 0.08)
+		panel_style.shadow_size = 12
 		panel.add_theme_stylebox_override("panel", panel_style)
+		
+		# Override Victory text labels
+		var title_label = panel.get_node_or_null("VictoryLabel")
+		if title_label:
+			title_label.add_theme_color_override("font_color", Color("2e7d32")) # Dark Green
+		var info_label = panel.get_node_or_null("InfoLabel")
+		if info_label:
+			info_label.add_theme_color_override("font_color", Color("546e7a")) # Slate Gray
 		
 	# 2. Restart Button
 	if restart_button:
 		var btn_normal = StyleBoxFlat.new()
-		btn_normal.bg_color = Color("1c1e26")
-		btn_normal.border_color = Color("00e5ff")
+		btn_normal.bg_color = Color("ffffff")
+		btn_normal.border_color = Color("81c784") # Pastel Green
 		btn_normal.border_width_left = 2
 		btn_normal.border_width_right = 2
 		btn_normal.border_width_top = 2
@@ -506,30 +519,30 @@ func style_ui():
 		btn_normal.corner_radius_top_right = 12
 		btn_normal.corner_radius_bottom_left = 12
 		btn_normal.corner_radius_bottom_right = 12
-		btn_normal.shadow_color = Color("00e5ff", 0.25)
-		btn_normal.shadow_size = 6
+		btn_normal.shadow_color = Color(0, 0, 0, 0.05)
+		btn_normal.shadow_size = 2
 		
 		var btn_hover = btn_normal.duplicate()
-		btn_hover.bg_color = Color("252936")
-		btn_hover.shadow_size = 10
+		btn_hover.bg_color = Color("f1f8e9")
+		btn_hover.shadow_size = 4
 		
 		var btn_pressed = btn_normal.duplicate()
-		btn_pressed.bg_color = Color("0f1014")
-		btn_pressed.shadow_size = 2
+		btn_pressed.bg_color = Color("e8f5e9")
+		btn_pressed.shadow_size = 1
 		
 		restart_button.add_theme_stylebox_override("normal", btn_normal)
 		restart_button.add_theme_stylebox_override("hover", btn_hover)
 		restart_button.add_theme_stylebox_override("pressed", btn_pressed)
 		
-		restart_button.add_theme_color_override("font_color", Color("00e5ff"))
-		restart_button.add_theme_color_override("font_hover_color", Color("ffffff"))
-		restart_button.add_theme_color_override("font_pressed_color", Color("00b2cc"))
+		restart_button.add_theme_color_override("font_color", Color("2e7d32"))
+		restart_button.add_theme_color_override("font_hover_color", Color("1b5e20"))
+		restart_button.add_theme_color_override("font_pressed_color", Color("1b5e20"))
 		
 	# 3. Generate Levels Button
 	if generate_levels_button:
 		var btn_normal = StyleBoxFlat.new()
-		btn_normal.bg_color = Color("1c1e26")
-		btn_normal.border_color = Color("ab47bc")
+		btn_normal.bg_color = Color("ffffff")
+		btn_normal.border_color = Color("ba68c8") # Pastel Purple
 		btn_normal.border_width_left = 2
 		btn_normal.border_width_right = 2
 		btn_normal.border_width_top = 2
@@ -538,30 +551,30 @@ func style_ui():
 		btn_normal.corner_radius_top_right = 12
 		btn_normal.corner_radius_bottom_left = 12
 		btn_normal.corner_radius_bottom_right = 12
-		btn_normal.shadow_color = Color("ab47bc", 0.25)
-		btn_normal.shadow_size = 6
+		btn_normal.shadow_color = Color(0, 0, 0, 0.05)
+		btn_normal.shadow_size = 2
 		
 		var btn_hover = btn_normal.duplicate()
-		btn_hover.bg_color = Color("252936")
-		btn_hover.shadow_size = 10
+		btn_hover.bg_color = Color("f3e5f5")
+		btn_hover.shadow_size = 4
 		
 		var btn_pressed = btn_normal.duplicate()
-		btn_pressed.bg_color = Color("0f1014")
-		btn_pressed.shadow_size = 2
+		btn_pressed.bg_color = Color("e1bee7")
+		btn_pressed.shadow_size = 1
 		
 		generate_levels_button.add_theme_stylebox_override("normal", btn_normal)
 		generate_levels_button.add_theme_stylebox_override("hover", btn_hover)
 		generate_levels_button.add_theme_stylebox_override("pressed", btn_pressed)
 		
-		generate_levels_button.add_theme_color_override("font_color", Color("ab47bc"))
-		generate_levels_button.add_theme_color_override("font_hover_color", Color("ffffff"))
-		generate_levels_button.add_theme_color_override("font_pressed_color", Color("8e24aa"))
+		generate_levels_button.add_theme_color_override("font_color", Color("6a1b9a"))
+		generate_levels_button.add_theme_color_override("font_hover_color", Color("4a148c"))
+		generate_levels_button.add_theme_color_override("font_pressed_color", Color("4a148c"))
 
 	# 4. Play Bonus Mode Button
 	if play_bonus_mode_button:
 		var btn_normal = StyleBoxFlat.new()
-		btn_normal.bg_color = Color("1c1e26")
-		btn_normal.border_color = Color("ff9100")
+		btn_normal.bg_color = Color("ffffff")
+		btn_normal.border_color = Color("ffb74d") # Pastel Orange
 		btn_normal.border_width_left = 2
 		btn_normal.border_width_right = 2
 		btn_normal.border_width_top = 2
@@ -570,30 +583,30 @@ func style_ui():
 		btn_normal.corner_radius_top_right = 12
 		btn_normal.corner_radius_bottom_left = 12
 		btn_normal.corner_radius_bottom_right = 12
-		btn_normal.shadow_color = Color("ff9100", 0.25)
-		btn_normal.shadow_size = 6
+		btn_normal.shadow_color = Color(0, 0, 0, 0.05)
+		btn_normal.shadow_size = 2
 		
 		var btn_hover = btn_normal.duplicate()
-		btn_hover.bg_color = Color("252936")
-		btn_hover.shadow_size = 10
+		btn_hover.bg_color = Color("fff3e0")
+		btn_hover.shadow_size = 4
 		
 		var btn_pressed = btn_normal.duplicate()
-		btn_pressed.bg_color = Color("0f1014")
-		btn_pressed.shadow_size = 2
+		btn_pressed.bg_color = Color("ffe0b2")
+		btn_pressed.shadow_size = 1
 		
 		play_bonus_mode_button.add_theme_stylebox_override("normal", btn_normal)
 		play_bonus_mode_button.add_theme_stylebox_override("hover", btn_hover)
 		play_bonus_mode_button.add_theme_stylebox_override("pressed", btn_pressed)
 		
-		play_bonus_mode_button.add_theme_color_override("font_color", Color("ff9100"))
-		play_bonus_mode_button.add_theme_color_override("font_hover_color", Color("ffffff"))
-		play_bonus_mode_button.add_theme_color_override("font_pressed_color", Color("e65100"))
+		play_bonus_mode_button.add_theme_color_override("font_color", Color("e65100"))
+		play_bonus_mode_button.add_theme_color_override("font_hover_color", Color("bf360c"))
+		play_bonus_mode_button.add_theme_color_override("font_pressed_color", Color("bf360c"))
 
 	# 5. Shop Button
 	if shop_button:
 		var btn_normal = StyleBoxFlat.new()
-		btn_normal.bg_color = Color("1c1e26")
-		btn_normal.border_color = Color("ffd600") # Yellow
+		btn_normal.bg_color = Color("ffffff")
+		btn_normal.border_color = Color("ffd54f") # Pastel Yellow
 		btn_normal.border_width_left = 2
 		btn_normal.border_width_right = 2
 		btn_normal.border_width_top = 2
@@ -602,31 +615,31 @@ func style_ui():
 		btn_normal.corner_radius_top_right = 12
 		btn_normal.corner_radius_bottom_left = 12
 		btn_normal.corner_radius_bottom_right = 12
-		btn_normal.shadow_color = Color("ffd600", 0.25)
-		btn_normal.shadow_size = 6
+		btn_normal.shadow_color = Color(0, 0, 0, 0.05)
+		btn_normal.shadow_size = 2
 		
 		var btn_hover = btn_normal.duplicate()
-		btn_hover.bg_color = Color("252936")
-		btn_hover.shadow_size = 10
+		btn_hover.bg_color = Color("fffde7")
+		btn_hover.shadow_size = 4
 		
 		var btn_pressed = btn_normal.duplicate()
-		btn_pressed.bg_color = Color("0f1014")
-		btn_pressed.shadow_size = 2
+		btn_pressed.bg_color = Color("fff9c4")
+		btn_pressed.shadow_size = 1
 		
 		shop_button.add_theme_stylebox_override("normal", btn_normal)
 		shop_button.add_theme_stylebox_override("hover", btn_hover)
 		shop_button.add_theme_stylebox_override("pressed", btn_pressed)
 		
-		shop_button.add_theme_color_override("font_color", Color("ffd600"))
-		shop_button.add_theme_color_override("font_hover_color", Color("ffffff"))
-		shop_button.add_theme_color_override("font_pressed_color", Color("c5a300"))
+		shop_button.add_theme_color_override("font_color", Color("f57f17"))
+		shop_button.add_theme_color_override("font_hover_color", Color("e65100"))
+		shop_button.add_theme_color_override("font_pressed_color", Color("e65100"))
 
 	# 6. Shop Panel Overlay
 	var shop_panel = shop_screen.get_node_or_null("Panel") if shop_screen else null
 	if shop_panel:
 		var panel_style = StyleBoxFlat.new()
-		panel_style.bg_color = Color("12141c")
-		panel_style.border_color = Color("ffd600") # Neon Yellow
+		panel_style.bg_color = Color("ffffff") # White shop panel background
+		panel_style.border_color = Color("ffd54f") # Pastel Yellow
 		panel_style.border_width_left = 4
 		panel_style.border_width_right = 4
 		panel_style.border_width_top = 4
@@ -635,15 +648,46 @@ func style_ui():
 		panel_style.corner_radius_top_right = 24
 		panel_style.corner_radius_bottom_left = 24
 		panel_style.corner_radius_bottom_right = 24
-		panel_style.shadow_color = Color("ffd600", 0.2)
-		panel_style.shadow_size = 15
+		panel_style.shadow_color = Color(0, 0, 0, 0.08)
+		panel_style.shadow_size = 12
 		shop_panel.add_theme_stylebox_override("panel", panel_style)
+		
+		# Override Shop text colors
+		var title_lbl = shop_panel.get_node_or_null("TitleLabel")
+		if title_lbl:
+			title_lbl.add_theme_color_override("font_color", Color("f57f17")) # Orange/yellow
+		
+		# Style individual item containers in the Shop
+		var items = ["ItemStandard", "ItemIron", "ItemSuper"]
+		for item_name in items:
+			var item_node = shop_panel.get_node_or_null(item_name)
+			if item_node:
+				var item_style = StyleBoxFlat.new()
+				item_style.bg_color = Color("fafafa") # Soft light card background
+				item_style.border_color = Color("e0e0e0")
+				item_style.border_width_left = 1
+				item_style.border_width_right = 1
+				item_style.border_width_top = 1
+				item_style.border_width_bottom = 1
+				item_style.corner_radius_top_left = 14
+				item_style.corner_radius_top_right = 14
+				item_style.corner_radius_bottom_left = 14
+				item_style.corner_radius_bottom_right = 14
+				item_node.add_theme_stylebox_override("panel", item_style)
+				
+				# Style texts inside the card
+				var name_lbl = item_node.get_node_or_null("NameLabel")
+				if name_lbl:
+					name_lbl.add_theme_color_override("font_color", Color("37474f")) # Dark slate gray
+				var desc_lbl = item_node.get_node_or_null("DescLabel")
+				if desc_lbl:
+					desc_lbl.add_theme_color_override("font_color", Color("78909c")) # Light slate gray
 		
 	# 7. Shop Close Button
 	if shop_close_button:
 		var btn_normal = StyleBoxFlat.new()
-		btn_normal.bg_color = Color("1c1e26")
-		btn_normal.border_color = Color("ff1744") # Red
+		btn_normal.bg_color = Color("ffffff")
+		btn_normal.border_color = Color("ef5350") # Pastel Red
 		btn_normal.border_width_left = 2
 		btn_normal.border_width_right = 2
 		btn_normal.border_width_top = 2
@@ -654,26 +698,25 @@ func style_ui():
 		btn_normal.corner_radius_bottom_right = 8
 		
 		var btn_hover = btn_normal.duplicate()
-		btn_hover.bg_color = Color("ff1744")
-		btn_hover.shadow_color = Color("ff1744", 0.3)
-		btn_hover.shadow_size = 6
+		btn_hover.bg_color = Color("ffebee")
+		btn_hover.shadow_size = 2
 		
 		var btn_pressed = btn_normal.duplicate()
-		btn_pressed.bg_color = Color("b20020")
+		btn_pressed.bg_color = Color("ffcdd2")
 		
 		shop_close_button.add_theme_stylebox_override("normal", btn_normal)
 		shop_close_button.add_theme_stylebox_override("hover", btn_hover)
 		shop_close_button.add_theme_stylebox_override("pressed", btn_pressed)
 		
-		shop_close_button.add_theme_color_override("font_color", Color("ff1744"))
-		shop_close_button.add_theme_color_override("font_hover_color", Color("ffffff"))
+		shop_close_button.add_theme_color_override("font_color", Color("ef5350"))
+		shop_close_button.add_theme_color_override("font_hover_color", Color("c62828"))
 
 	# 8. Style Item Action Buttons initially
 	for i in range(shop_buttons.size()):
 		var btn = shop_buttons[i]
 		if btn:
 			var btn_style = StyleBoxFlat.new()
-			btn_style.bg_color = Color("1c1e26")
+			btn_style.bg_color = Color("ffffff")
 			btn_style.border_width_left = 2
 			btn_style.border_width_right = 2
 			btn_style.border_width_top = 2
@@ -685,9 +728,9 @@ func style_ui():
 			btn.add_theme_stylebox_override("normal", btn_style)
 			
 			var btn_hov = btn_style.duplicate()
-			btn_hov.bg_color = Color("252936")
+			btn_hov.bg_color = Color("f5f5f5")
 			btn.add_theme_stylebox_override("hover", btn_hov)
 			
 			var btn_pr = btn_style.duplicate()
-			btn_pr.bg_color = Color("0f1014")
+			btn_pr.bg_color = Color("e0e0e0")
 			btn.add_theme_stylebox_override("pressed", btn_pr)
