@@ -166,21 +166,39 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	hole.position = cell_pos + Vector2((cell_size - h_size)/2.0, (cell_size - h_size)/2.0)
 	
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color("0d0d1b")
-	style.border_color = Color("ff007f") # Glowing Pink
-	style.border_width_left = 4
-	style.border_width_right = 4
-	style.border_width_top = 4
-	style.border_width_bottom = 4
+	style.bg_color = Color("05050d") # Deep dark cup center
+	style.border_color = Color("ffffff") # White rim/cup edge
+	style.border_width_left = 3
+	style.border_width_right = 3
+	style.border_width_top = 3
+	style.border_width_bottom = 3
 	style.corner_radius_top_left = h_size / 2.0
 	style.corner_radius_top_right = h_size / 2.0
 	style.corner_radius_bottom_left = h_size / 2.0
 	style.corner_radius_bottom_right = h_size / 2.0
-	style.shadow_color = Color("ff007f", 0.4)
-	style.shadow_size = 6
-	
+	style.shadow_color = Color("ffffff", 0.25)
+	style.shadow_size = 4
 	hole.add_theme_stylebox_override("panel", style)
 	add_child(hole)
+	
+	# Add a white flagpole stick inside the hole
+	var stick = ColorRect.new()
+	stick.size = Vector2(4, h_size * 0.7)
+	stick.position = Vector2(h_size / 2.0 - 2, h_size * 0.15)
+	stick.color = Color("ffffff")
+	hole.add_child(stick)
+	
+	# Add a bright red flag at the top of the stick
+	var flag = Panel.new()
+	flag.size = Vector2(20, 14)
+	flag.position = Vector2(h_size / 2.0 + 2, h_size * 0.15)
+	var flag_style = StyleBoxFlat.new()
+	flag_style.bg_color = Color("ff1744") # Neon red flag
+	flag_style.corner_radius_top_right = 4
+	flag_style.corner_radius_bottom_right = 4
+	flag.add_theme_stylebox_override("panel", flag_style)
+	hole.add_child(flag)
+	
 	hole_node = hole
 
 func spawn_portal_visual(grid_pos: Vector2i, cell_pos: Vector2, color: Color, _name: String):

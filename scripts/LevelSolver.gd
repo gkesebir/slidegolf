@@ -65,6 +65,7 @@ static func solve_level(level_data: Dictionary) -> int:
 			var mask = curr_mask
 			var reached_hole = false
 			
+			var slide_visited = {}
 			while true:
 				var next_pos = pos + d
 				
@@ -75,6 +76,25 @@ static func solve_level(level_data: Dictionary) -> int:
 				# Wall check
 				if grid[next_pos.y][next_pos.x] == 1:
 					break
+					
+				# Detect infinite loops in a single slide step (e.g. portal ping-pong)
+				var slide_key = str(next_pos.x) + "," + str(next_pos.y)
+				if slide_visited.has(slide_key):
+					break
+				slide_visited[slide_key] = true
+					
+				# PortalIn check (type 4)
+				if grid[next_pos.y][next_pos.x] == 4:
+					var portal_out = _find_portal_out_pos(grid, width, height)
+					if portal_out != Vector2i(-1, -1):
+						# Teleport directly to PortalOut
+						pos = portal_out
+						
+						# Check if PortalOut itself has a gem
+						var gem_idx = gem_positions.find(pos)
+						if gem_idx != -1:
+							mask |= (1 << gem_idx)
+						continue
 					
 				# Valid step: move to next position
 				pos = next_pos
@@ -107,3 +127,10 @@ static func solve_level(level_data: Dictionary) -> int:
 
 static func _get_state_key(pos: Vector2i, mask: int) -> String:
 	return str(pos.x) + "," + str(pos.y) + "|" + str(mask)
+
+static func _find_portal_out_pos(grid: Array, width: int, height: int) -> Vector2i:
+	for y in range(height):
+		for x in range(width):
+			if grid[y][x] == 5: # PortalOut
+				return Vector2i(x, y)
+	return Vector2i(-1, -1)

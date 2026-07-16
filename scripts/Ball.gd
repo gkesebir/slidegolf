@@ -223,3 +223,19 @@ func update_button_trigger_states():
 		grid_manager.set_gate_state(true)
 	else:
 		grid_manager.set_gate_state(false)
+
+func _process(_delta):
+	if is_moving and grid_manager and game_manager:
+		# Calculate current cell based on visual global_position relative to GridManager
+		var local_pos = global_position - grid_manager.global_position
+		var current_cell = Vector2i(
+			floor(local_pos.x / grid_manager.cell_size),
+			floor(local_pos.y / grid_manager.cell_size)
+		)
+		
+		# If within bounds and has a diamond, collect it immediately
+		if current_cell.x >= 0 and current_cell.x < grid_manager.grid_width:
+			if current_cell.y >= 0 and current_cell.y < grid_manager.grid_height:
+				if grid_manager.get_cell_type(current_cell) == 2:
+					grid_manager.remove_diamond_visual(current_cell)
+					game_manager.collect_diamond()

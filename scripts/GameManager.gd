@@ -25,12 +25,15 @@ class_name GameManager
 @export var shop_close_button: Button
 @export var shop_gems_label: Label
 @export var shop_status_label: Label
-@export var shop_item_buttons: Array[Button] # Array indices: 0 = standard, 1 = iron, 2 = super
+@export var shop_item_buttons: Array[NodePath] # Array paths: 0 = standard, 1 = iron, 2 = super
+var shop_buttons: Array[Button] = []
 
 # Game state
 var total_diamonds: int = 0
 var diamonds_collected: int = 0
 var current_level_path: String = ""
+var current_level_index: int = 1
+var level_cleared: bool = false
 
 # Phase 3 Bonus Mode state
 var is_bonus_mode: bool = false
@@ -68,10 +71,17 @@ func _ready():
 	if shop_close_button:
 		shop_close_button.pressed.connect(_on_shop_close_button_pressed)
 		
-	if shop_item_buttons.size() >= 3:
-		shop_item_buttons[0].pressed.connect(func(): _on_shop_item_clicked("standard"))
-		shop_item_buttons[1].pressed.connect(func(): _on_shop_item_clicked("iron"))
-		shop_item_buttons[2].pressed.connect(func(): _on_shop_item_clicked("super"))
+	# Resolve shop buttons from NodePaths
+	shop_buttons.clear()
+	for path in shop_item_buttons:
+		var node = get_node_or_null(path)
+		if node is Button:
+			shop_buttons.append(node)
+			
+	if shop_buttons.size() >= 3:
+		shop_buttons[0].pressed.connect(func(): _on_shop_item_clicked("standard"))
+		shop_buttons[1].pressed.connect(func(): _on_shop_item_clicked("iron"))
+		shop_buttons[2].pressed.connect(func(): _on_shop_item_clicked("super"))
 		
 	style_ui()
 	initialize_game()
@@ -92,6 +102,11 @@ func initialize_game():
 		
 	is_bonus_mode = false
 	game_over = false
+	level_cleared = false
+	
+	if restart_button:
+		restart_button.text = "PLAY AGAIN"
+		
 	if timer_label:
 		timer_label.hide()
 		
@@ -131,6 +146,12 @@ func load_level_from_json(path: String) -> bool:
 		
 	var level_data = json.get_data()
 	current_level_path = path
+	level_cleared = false
+	
+	# Extract level index from filename, e.g. level_12.json -> 12
+	var level_name = path.get_file().get_basename()
+	if level_name.begins_with("level_"):
+		current_level_index = level_name.replace("level_", "").to_int()
 	
 	grid_manager.grid = level_data["grid"]
 	grid_manager.grid_width = level_data["grid_size"][0]
@@ -153,9 +174,13 @@ func load_level_from_json(path: String) -> bool:
 func start_bonus_mode():
 	is_bonus_mode = true
 	game_over = false
+	level_cleared = false
 	bonus_time_left = 30.0
 	diamonds_collected = 0
 	
+	if restart_button:
+		restart_button.text = "PLAY AGAIN"
+		
 	grid_manager.reset_grid()
 	total_diamonds = count_diamonds_in_grid()
 	
@@ -177,6 +202,9 @@ func end_bonus_level():
 	SaveManager.add_gems(diamonds_collected)
 	update_ui()
 	
+	if restart_button:
+		restart_button.text = "PLAY AGAIN"
+		
 	if victory_screen:
 		victory_screen.show()
 		
@@ -237,10 +265,17 @@ func update_timer_label():
 
 func win_level():
 	print("Level Cleared!")
+	level_cleared = true
 	
 	# Add collected gems to the persistent wallet
 	SaveManager.add_gems(diamonds_collected)
 	update_ui()
+	
+	if restart_button:
+		var next_index = current_level_index + 1
+		if next_index > 50:
+			next_index = 1
+		restart_button.text = "NEXT LEVEL (Level %d)" % next_index
 	
 	if victory_screen:
 		victory_screen.show()
@@ -264,10 +299,16 @@ func win_level():
 func _on_restart_button_pressed():
 	if is_bonus_mode:
 		start_bonus_mode()
+	elif level_cleared:
+		# Load next sequential level
+		var next_index = current_level_index + 1
+		if next_index > 50:
+			next_index = 1
+		var next_path = "res://levels/level_%d.json" % next_index
+		load_level_from_json(next_path)
 	elif current_level_path != "":
 		load_level_from_json(current_level_path)
 	else:
-		grid_manager.reset_grid()
 		initialize_game()
 
 func _on_play_bonus_mode_pressed():
@@ -321,10 +362,10 @@ func refresh_shop_ui():
 		shop_gems_label.text = "GEMS: %d" % SaveManager.gems_wallet
 		
 	# Refresh button texts
-	if shop_item_buttons.size() >= 3:
-		update_item_button_state(shop_item_buttons[0], "standard")
-		update_item_button_state(shop_item_buttons[1], "iron")
-		update_item_button_state(shop_item_buttons[2], "super")
+	if shop_buttons.size() >= 3:
+		update_item_button_state(shop_buttons[0], "standard")
+		update_item_button_state(shop_buttons[1], "iron")
+		update_item_button_state(shop_buttons[2], "super")
 
 func update_item_button_state(btn: Button, ball_id: String):
 	if not btn:
@@ -628,8 +669,8 @@ func style_ui():
 		shop_close_button.add_theme_color_override("font_hover_color", Color("ffffff"))
 
 	# 8. Style Item Action Buttons initially
-	for i in range(shop_item_buttons.size()):
-		var btn = shop_item_buttons[i]
+	for i in range(shop_buttons.size()):
+		var btn = shop_buttons[i]
 		if btn:
 			var btn_style = StyleBoxFlat.new()
 			btn_style.bg_color = Color("1c1e26")
