@@ -27,8 +27,8 @@ jobs:
       - name: Install Godot CLI and Templates
         run: |
           mkdir -p ~/bin
-          # 1. Godot 4.7 Engine İndiriliyor
-          wget -q https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
+          # 1. Godot 4.7 Engine İndiriliyor (IPv4 zorlanarak ve curl ile 5 kez yeniden deneme yapılandırarak)
+          curl -4 -LO --retry 5 --retry-delay 5 https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
           unzip -q Godot_v4.7-stable_linux.x86_64.zip
           mv Godot_v4.7-stable_linux.x86_64 ~/bin/godot
           rm Godot_v4.7-stable_linux.x86_64.zip
@@ -37,8 +37,8 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/4.7.stable
           mkdir -p ~/.local/share/godot/templates/4.7.stable
           
-          # 3. Tam Uyumlu Godot 4.7 Şablonları İndiriliyor
-          wget -q https://downloads.tuxfamily.org/godotengine/4.7/Godot_v4.7-stable_export_templates.tpz
+          # 3. Tam Uyumlu Godot 4.7 Şablonları İndiriliyor (IPv4 zorlanarak ve curl ile 5 kez yeniden deneme yapılandırarak)
+          curl -4 -LO --retry 5 --retry-delay 5 https://downloads.tuxfamily.org/godotengine/4.7/Godot_v4.7-stable_export_templates.tpz
           unzip -q Godot_v4.7-stable_export_templates.tpz
           
           # 4. Şablonlar Doğru Dizine Dağıtılıyor
@@ -55,7 +55,6 @@ jobs:
           ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           mkdir -p build/android
-          # Debug moduyla imzalama hatalarını bypass ederek doğrudan APK üretiyoruz
           ~/bin/godot --headless --verbose --export-debug "Android" build/android/SlideGolf.apk
 
       - name: Upload APK Artifact
