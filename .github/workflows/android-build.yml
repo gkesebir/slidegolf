@@ -24,27 +24,57 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # Asistanın önerdiği Cache Adımı: Şablonları hafızaya alır, süreyi kısaltır.
+      - name: Cache Godot export templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/4.7.stable
+          key: godot-templates-4.7-stable-${{ runner.os }}-v1
+          restore-keys: |
+            godot-templates-4.7-stable-${{ runner.os }}-
+
+      # Asistanın önerdiği Kaya Gibi Sağlam Kurulum Adımı (Çökmeyen sunucudan indirir)
       - name: Install Godot CLI and Templates
         run: |
+          set -euo pipefail
           mkdir -p ~/bin
-          # 1. Godot 4.7 Engine İndiriliyor (IPv4 zorlanarak ve curl ile 5 kez yeniden deneme yapılandırarak)
-          curl -4 -LO --retry 5 --retry-delay 5 https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
+
+          # 1. Godot 4.7 Engine İndiriliyor (GitHub'dan güvenli indirme)
+          curl -4 -fSL --retry 5 --retry-delay 5 --retry-connrefused -o Godot_v4.7-stable_linux.x86_64.zip https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
           unzip -q Godot_v4.7-stable_linux.x86_64.zip
           mv Godot_v4.7-stable_linux.x86_64 ~/bin/godot
-          rm Godot_v4.7-stable_linux.x86_64.zip
-          
-          # 2. Şablon Klasörleri Oluşturuluyor
+          rm -f Godot_v4.7-stable_linux.x86_64.zip
+
+          # 2. Klasörler Hazırlanıyor
           mkdir -p ~/.local/share/godot/export_templates/4.7.stable
           mkdir -p ~/.local/share/godot/templates/4.7.stable
-          
-          # 3. Tam Uyumlu Godot 4.7 Şablonları İndiriliyor (IPv4 zorlanarak ve curl ile 5 kez yeniden deneme yapılandırarak)
-          curl -4 -LO --retry 5 --retry-delay 5 https://downloads.tuxfamily.org/godotengine/4.7/Godot_v4.7-stable_export_templates.tpz
-          unzip -q Godot_v4.7-stable_export_templates.tpz
-          
-          # 4. Şablonlar Doğru Dizine Dağıtılıyor
-          cp -r templates/* ~/.local/share/godot/export_templates/4.7.stable/
-          cp -r templates/* ~/.local/share/godot/templates/4.7.stable/
-          rm -rf templates Godot_v4.7-stable_export_templates.tpz
+
+          # 3. Şablonlar İndiriliyor (Önce GitHub'ı dener, çökerse alternatif sunucuya geçer)
+          TEMPLATE_FILE=templates.tpz
+          for url in \
+            "https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_export_templates.tpz" \
+            "https://downloads.tuxfamily.org/godotengine/4.7/Godot_v4.7-stable_export_templates.tpz"
+          do
+            echo "Attempting to download templates from: $url"
+            if curl -4 -fSL --retry 5 --retry-delay 5 --retry-connrefused -o "$TEMPLATE_FILE" "$url"; then
+              echo "Downloaded templates from $url"
+              break
+            else
+              echo "Download failed from $url"
+              rm -f "$TEMPLATE_FILE"
+            fi
+          done
+
+          if [ ! -f "$TEMPLATE_FILE" ]; then
+            echo "ERROR: Failed to download Godot export templates from all sources."
+            exit 1
+          fi
+
+          # 4. Şablonlar Klasörlere Açılıyor
+          unzip -q "$TEMPLATE_FILE" -d templates_tmp
+          cp -r templates_tmp/* ~/.local/share/godot/export_templates/4.7.stable/
+          cp -r templates_tmp/* ~/.local/share/godot/templates/4.7.stable/
+          rm -rf templates_tmp "$TEMPLATE_FILE"
 
       - name: Verify Godot Installation
         run: |
