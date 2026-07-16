@@ -41,6 +41,9 @@ var camera: Camera2D
 var start_marker: Panel
 var is_sidebar_open = false
 
+var loaded_level_path: String = ""
+var loaded_custom_index: int = -1
+
 # Struct to map button texts for localization styling
 var level_buttons_data: Array = [] # Stores array of {"btn": Button, "dict": Dictionary, "path": String} for auditing
 
@@ -450,7 +453,7 @@ func build_level_list():
 	for i in range(1, 51):
 		var path = "res://levels/level_%d.json" % i
 		if FileAccess.file_exists(path):
-			_add_list_element("Seviye %d" % i, path, {}, btn_normal)
+			_add_list_element("Seviye %d" % i, path, {}, -1, btn_normal)
 			
 	# 2. Custom levels
 	var custom_path = "res://custom_levels.json"
@@ -465,9 +468,9 @@ func build_level_list():
 				if data is Array:
 					for idx in range(data.size()):
 						var level_dict = data[idx]
-						_add_list_element("Özel %d" % (idx + 1), "", level_dict, btn_normal)
+						_add_list_element("Özel %d" % (idx + 1), "", level_dict, idx, btn_normal)
 
-func _add_list_element(label_text: String, file_path: String, direct_dict: Dictionary, base_style: StyleBoxFlat):
+func _add_list_element(label_text: String, file_path: String, direct_dict: Dictionary, custom_idx: int, base_style: StyleBoxFlat):
 	var btn = Button.new()
 	btn.text = label_text
 	btn.custom_minimum_size = Vector2(0, 70)
@@ -477,15 +480,18 @@ func _add_list_element(label_text: String, file_path: String, direct_dict: Dicti
 	
 	# Load action
 	btn.pressed.connect(func():
-		_load_level_data(file_path, direct_dict)
+		_load_level_data(file_path, direct_dict, custom_idx)
 		_toggle_sidebar()
 	)
 	
 	level_list_container.add_child(btn)
 	level_buttons_data.append({"btn": btn, "path": file_path, "dict": direct_dict})
 
-func _load_level_data(file_path: String, direct_dict: Dictionary):
+func _load_level_data(file_path: String, direct_dict: Dictionary, custom_idx: int):
 	var level_data: Dictionary = {}
+	
+	loaded_level_path = file_path
+	loaded_custom_index = custom_idx
 	
 	if not file_path.is_empty():
 		# Load from file
@@ -586,34 +592,82 @@ func _on_save_pressed():
 	var moves = LevelSolver.solve_level(level_data)
 	level_data["min_moves"] = moves
 	
-	var path = "res://custom_levels.json"
-	var custom_levels = []
+	var custom_path = "res://custom_levels.json"
 	
-	if FileAccess.file_exists(path):
-		var file = FileAccess.open(path, FileAccess.READ)
+	if not loaded_level_path.is_empty():
+		# Save directly back to the loaded built-in level path!
+		var file = FileAccess.open(loaded_level_path, FileAccess.WRITE)
 		if file:
-			var json_str = file.get_as_text()
+			var json_str = JSON.stringify(level_data, "\t")
+			file.store_string(json_str)
 			file.close()
-			var json = JSON.new()
-			if json.parse(json_str) == OK:
-				var data = json.get_data()
-				if data is Array:
-					custom_levels = data
-					
-	custom_levels.append(level_data)
-	
-	var file = FileAccess.open(path, FileAccess.WRITE)
-	if file:
-		var json_str = JSON.stringify(custom_levels, "\t")
-		file.store_string(json_str)
-		file.close()
-		
-		if status_label:
-			status_label.text = "Seviye custom_levels.json dosyasına kaydedildi!"
-			status_label.add_theme_color_override("font_color", Color("2e7d32"))
-		build_level_list()
+			
+			if status_label:
+				status_label.text = "Seviye başarıyla güncellendi: %s" % loaded_level_path.get_file()
+				status_label.add_theme_color_override("font_color", Color("2e7d32"))
+			build_level_list()
+		else:
+			printerr("Guncelleme basarisiz: ", loaded_level_path)
+			
+	elif loaded_custom_index != -1:
+		# Overwrite existing custom level at index
+		var custom_levels = []
+		if FileAccess.file_exists(custom_path):
+			var file = FileAccess.open(custom_path, FileAccess.READ)
+			if file:
+				var json_str = file.get_as_text()
+				file.close()
+				var json = JSON.new()
+				if json.parse(json_str) == OK:
+					var data = json.get_data()
+					if data is Array:
+						custom_levels = data
+						
+		if loaded_custom_index >= 0 and loaded_custom_index < custom_levels.size():
+			custom_levels[loaded_custom_index] = level_data
+			
+			var file = FileAccess.open(custom_path, FileAccess.WRITE)
+			if file:
+				var json_str = JSON.stringify(custom_levels, "\t")
+				file.store_string(json_str)
+				file.close()
+				
+				if status_label:
+					status_label.text = "Özel Seviye %d başarıyla güncellendi!" % (loaded_custom_index + 1)
+					status_label.add_theme_color_override("font_color", Color("2e7d32"))
+				build_level_list()
+			else:
+				printerr("Ozel seviye guncelleme basarisiz.")
+				
 	else:
-		printerr("Kaydetme basarisiz.")
+		# Save as a new custom level (append)
+		var custom_levels = []
+		if FileAccess.file_exists(custom_path):
+			var file = FileAccess.open(custom_path, FileAccess.READ)
+			if file:
+				var json_str = file.get_as_text()
+				file.close()
+				var json = JSON.new()
+				if json.parse(json_str) == OK:
+					var data = json.get_data()
+					if data is Array:
+						custom_levels = data
+						
+		custom_levels.append(level_data)
+		loaded_custom_index = custom_levels.size() - 1
+		
+		var file = FileAccess.open(custom_path, FileAccess.WRITE)
+		if file:
+			var json_str = JSON.stringify(custom_levels, "\t")
+			file.store_string(json_str)
+			file.close()
+			
+			if status_label:
+				status_label.text = "Yeni Özel Seviye %d olarak kaydedildi!" % (loaded_custom_index + 1)
+				status_label.add_theme_color_override("font_color", Color("2e7d32"))
+			build_level_list()
+		else:
+			printerr("Yeni ozel seviye kaydetme basarisiz.")
 
 func _on_play_test_pressed():
 	var level_data = get_level_dictionary()
@@ -626,6 +680,8 @@ func _on_new_level_pressed():
 	# Clear Canvas, reset size to 7x7 and default layout
 	grid_width = 7
 	grid_height = 7
+	loaded_level_path = ""
+	loaded_custom_index = -1
 	_initialize_default_grid()
 	update_start_marker()
 	_update_grid_labels()

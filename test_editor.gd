@@ -91,5 +91,38 @@ func _init():
 		quit(1)
 		return
 		
+	# 5. Test Load and Overwrite Save System
+	print("Testing load and overwrite save system...")
+	editor._on_new_level_pressed() # Reset to new level state
+	if editor.loaded_custom_index != -1 or not editor.loaded_level_path.is_empty():
+		printerr("New level press did not clear tracking variables!")
+		quit(1)
+		return
+		
+	# Save a new custom level
+	editor._on_save_pressed()
+	var first_idx = editor.loaded_custom_index
+	if first_idx == -1:
+		printerr("Saving new level did not assign a custom level index!")
+		quit(1)
+		return
+	print("New level saved to custom index: ", first_idx)
+	
+	# Save again, it should update the same custom index slot
+	editor._on_save_pressed()
+	if editor.loaded_custom_index != first_idx:
+		printerr("Subsequent save created a new slot instead of overwriting! Index changed to: ", editor.loaded_custom_index)
+		quit(1)
+		return
+	print("Subsequent save successfully overwrote index: ", first_idx)
+	
+	# Load a mock built-in level path and save back
+	editor._load_level_data("", dict_void, 3)
+	if editor.loaded_custom_index != 3:
+		printerr("Failed to track custom load index!")
+		quit(1)
+		return
+	print("Custom level loaded at index 3.")
+		
 	print("--- Advanced Level Editor Integration Test Success! ---")
 	quit(0)
