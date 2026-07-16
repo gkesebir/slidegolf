@@ -1,0 +1,151 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/LevelEditor.gd" id="1_editor"]
+[ext_resource type="Script" path="res://scripts/GridManager.gd" id="2_grid"]
+
+[node name="LevelEditor" type="Control" node_paths=PackedStringArray("grid_manager", "status_label", "tool_buttons", "save_button", "play_test_button", "back_button")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_editor")
+grid_manager = NodePath("GridManager")
+status_label = NodePath("UI/BottomBar/StatusLabel")
+tool_buttons = [NodePath("UI/BottomBar/PaletteContainer/WallButton"), NodePath("UI/BottomBar/PaletteContainer/GemButton"), NodePath("UI/BottomBar/PaletteContainer/HoleButton"), NodePath("UI/BottomBar/PaletteContainer/PortalInButton"), NodePath("UI/BottomBar/PaletteContainer/PortalOutButton"), NodePath("UI/BottomBar/PaletteContainer/StartButton"), NodePath("UI/BottomBar/PaletteContainer/GrassButton")]
+save_button = NodePath("UI/BottomBar/ActionsContainer/SaveButton")
+play_test_button = NodePath("UI/BottomBar/ActionsContainer/PlayTestButton")
+back_button = NodePath("UI/BottomBar/ActionsContainer/BackButton")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.945098, 0.972549, 0.913725, 1)
+
+[node name="GridManager" type="Node2D" parent="."]
+script = ExtResource("2_grid")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="BottomBar" type="Panel" parent="UI"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -480.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="StatusLabel" type="Label" parent="UI/BottomBar"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 20.0
+offset_bottom = 70.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 28
+text = "Status: Solvable (Par: 5 moves)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PaletteContainer" type="GridContainer" parent="UI/BottomBar"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = 40.0
+offset_top = -140.0
+offset_right = -40.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 20
+columns = 4
+
+[node name="WallButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 24
+text = "WALL"
+
+[node name="GemButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 24
+text = "GEM"
+
+[node name="HoleButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 24
+text = "HOLE"
+
+[node name="PortalInButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 24
+text = "PORTAL IN"
+
+[node name="PortalOutButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 24
+text = "PORTAL OUT"
+
+[node name="StartButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 24
+text = "START"
+
+[node name="GrassButton" type="Button" parent="UI/BottomBar/PaletteContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 24
+text = "CLEAR"
+
+[node name="ActionsContainer" type="HBoxContainer" parent="UI/BottomBar"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = -120.0
+offset_right = -40.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 20
+
+[node name="SaveButton" type="Button" parent="UI/BottomBar/ActionsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 28
+text = "SAVE LEVEL"
+
+[node name="PlayTestButton" type="Button" parent="UI/BottomBar/ActionsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 28
+text = "PLAY TEST"
+
+[node name="BackButton" type="Button" parent="UI/BottomBar/ActionsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 28
+text = "BACK"

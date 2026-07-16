@@ -6,6 +6,7 @@ const SAVE_PATH = "user://save_data.json"
 var gems_wallet: int = 0
 var unlocked_balls: Array = ["standard"]
 var equipped_ball: String = "standard"
+var playtest_level_data: Dictionary = {}
 
 func _ready():
 	load_game()

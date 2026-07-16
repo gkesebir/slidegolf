@@ -17,7 +17,7 @@ script = ExtResource("2_grid")
 [node name="Ball" type="Node2D" parent="."]
 script = ExtResource("3_ball")
 
-[node name="GameManager" type="Node" parent="." node_paths=PackedStringArray("grid_manager", "ball", "diamond_label", "victory_screen", "restart_button", "debug_status_label", "generate_levels_button", "timer_label", "play_bonus_mode_button", "shop_button", "shop_screen", "shop_close_button", "shop_gems_label", "shop_status_label")]
+[node name="GameManager" type="Node" parent="." node_paths=PackedStringArray("grid_manager", "ball", "diamond_label", "victory_screen", "restart_button", "debug_status_label", "generate_levels_button", "editor_button", "timer_label", "play_bonus_mode_button", "shop_button", "shop_screen", "shop_close_button", "shop_gems_label", "shop_status_label")]
 script = ExtResource("1_gm")
 grid_manager = NodePath("../GridManager")
 ball = NodePath("../Ball")
@@ -26,6 +26,7 @@ victory_screen = NodePath("../UI/VictoryScreen")
 restart_button = NodePath("../UI/VictoryScreen/Panel/RestartButton")
 debug_status_label = NodePath("../UI/DebugPanel/DebugStatusLabel")
 generate_levels_button = NodePath("../UI/DebugPanel/GenerateButton")
+editor_button = NodePath("../UI/DebugPanel/EditorButton")
 timer_label = NodePath("../UI/TopBar/TimerLabel")
 play_bonus_mode_button = NodePath("../UI/DebugPanel/PlayBonusButton")
 shop_button = NodePath("../UI/TopBar/ShopButton")
@@ -487,9 +488,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -450.0
-offset_top = -320.0
+offset_top = -380.0
 offset_right = 450.0
-offset_bottom = -260.0
+offset_bottom = -340.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
@@ -497,6 +498,22 @@ theme_override_font_sizes/font_size = 28
 text = "Press button to generate 50 solvable levels"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="EditorButton" type="Button" parent="UI/DebugPanel"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -250.0
+offset_top = -320.0
+offset_right = 250.0
+offset_bottom = -240.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 32
+text = "LEVEL EDITOR"
 
 [node name="PlayBonusButton" type="Button" parent="UI/DebugPanel"]
 layout_mode = 1
@@ -506,7 +523,7 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -250.0
-offset_top = -230.0
+offset_top = -220.0
 offset_right = 250.0
 offset_bottom = -140.0
 grow_horizontal = 2
@@ -522,9 +539,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -250.0
-offset_top = -110.0
+offset_top = -120.0
 offset_right = 250.0
-offset_bottom = -20.0
+offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_font_sizes/font_size = 32

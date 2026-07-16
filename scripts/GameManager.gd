@@ -14,6 +14,7 @@ class_name GameManager
 # Debug UI Nodes
 @export var debug_status_label: Label
 @export var generate_levels_button: Button
+@export var editor_button: Button
 
 # Phase 3 UI Nodes
 @export var timer_label: Label
@@ -61,6 +62,9 @@ func _ready():
 		
 	if generate_levels_button:
 		generate_levels_button.pressed.connect(_on_generate_levels_pressed)
+		
+	if editor_button:
+		editor_button.pressed.connect(_on_editor_button_pressed)
 		
 	if play_bonus_mode_button:
 		play_bonus_mode_button.pressed.connect(_on_play_bonus_mode_pressed)
@@ -113,6 +117,12 @@ func initialize_game():
 	if shop_screen:
 		shop_screen.hide()
 		
+	if not SaveManager.playtest_level_data.is_empty():
+		var level_data = SaveManager.playtest_level_data.duplicate()
+		SaveManager.playtest_level_data.clear()
+		load_level_from_dict(level_data)
+		return
+
 	var level1_path = "res://levels/level_1.json"
 	if FileAccess.file_exists(level1_path):
 		load_level_from_json(level1_path)
@@ -170,6 +180,27 @@ func load_level_from_json(path: String) -> bool:
 		victory_screen.hide()
 		
 	return true
+
+func load_level_from_dict(level_data: Dictionary):
+	current_level_path = ""
+	level_cleared = false
+	current_level_index = -1
+	
+	grid_manager.grid = level_data["grid"]
+	grid_manager.grid_width = level_data["grid_size"][0]
+	grid_manager.grid_height = level_data["grid_size"][1]
+	
+	grid_manager.reset_grid()
+	
+	total_diamonds = count_diamonds_in_grid()
+	diamonds_collected = 0
+	update_ui()
+	
+	var start_arr = level_data["player_start"]
+	ball.initialize(Vector2i(start_arr[0], start_arr[1]), grid_manager, self)
+	
+	if victory_screen:
+		victory_screen.hide()
 
 func start_bonus_mode():
 	is_bonus_mode = true
@@ -420,6 +451,9 @@ func show_shop_status(msg: String, color: Color):
 func _on_generate_levels_pressed():
 	generate_and_save_50_levels()
 
+func _on_editor_button_pressed():
+	get_tree().change_scene_to_file("res://scenes/LevelEditor.tscn")
+
 func generate_and_save_50_levels():
 	if generate_levels_button:
 		generate_levels_button.disabled = true
@@ -569,6 +603,38 @@ func style_ui():
 		generate_levels_button.add_theme_color_override("font_color", Color("6a1b9a"))
 		generate_levels_button.add_theme_color_override("font_hover_color", Color("4a148c"))
 		generate_levels_button.add_theme_color_override("font_pressed_color", Color("4a148c"))
+
+	# 3b. Editor Button
+	if editor_button:
+		var btn_normal = StyleBoxFlat.new()
+		btn_normal.bg_color = Color("ffffff")
+		btn_normal.border_color = Color("4fc3f7") # Pastel Light Blue
+		btn_normal.border_width_left = 2
+		btn_normal.border_width_right = 2
+		btn_normal.border_width_top = 2
+		btn_normal.border_width_bottom = 2
+		btn_normal.corner_radius_top_left = 12
+		btn_normal.corner_radius_top_right = 12
+		btn_normal.corner_radius_bottom_left = 12
+		btn_normal.corner_radius_bottom_right = 12
+		btn_normal.shadow_color = Color(0, 0, 0, 0.05)
+		btn_normal.shadow_size = 2
+		
+		var btn_hover = btn_normal.duplicate()
+		btn_hover.bg_color = Color("e1f5fe")
+		btn_hover.shadow_size = 4
+		
+		var btn_pressed = btn_normal.duplicate()
+		btn_pressed.bg_color = Color("b3e5fc")
+		btn_pressed.shadow_size = 1
+		
+		editor_button.add_theme_stylebox_override("normal", btn_normal)
+		editor_button.add_theme_stylebox_override("hover", btn_hover)
+		editor_button.add_theme_stylebox_override("pressed", btn_pressed)
+		
+		editor_button.add_theme_color_override("font_color", Color("0288d1"))
+		editor_button.add_theme_color_override("font_hover_color", Color("01579b"))
+		editor_button.add_theme_color_override("font_pressed_color", Color("01579b"))
 
 	# 4. Play Bonus Mode Button
 	if play_bonus_mode_button:
