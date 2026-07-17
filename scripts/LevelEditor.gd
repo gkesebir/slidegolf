@@ -261,7 +261,7 @@ func update_start_marker():
 	if not is_instance_valid(grid_manager):
 		return
 		
-	if not start_marker:
+	if not is_instance_valid(start_marker) or start_marker.is_queued_for_deletion():
 		start_marker = Panel.new()
 		start_marker.z_index = 100 # Top her zaman en üstte görünsün
 		start_marker.size = Vector2(grid_manager.cell_size * 0.5, grid_manager.cell_size * 0.5)
@@ -538,10 +538,8 @@ func _on_save_pressed():
 	var moves = LevelSolver.solve_level(level_data)
 	level_data["min_moves"] = moves
 	
-	var custom_path = "res://custom_levels.json"
-	
 	if not loaded_level_path.is_empty():
-		# Save directly back to the loaded built-in level path!
+		# Var olan gercek oyundaki bolumu ustune yaz
 		var file = FileAccess.open(loaded_level_path, FileAccess.WRITE)
 		if file:
 			var json_str = JSON.stringify(level_data, "\t")
@@ -555,65 +553,40 @@ func _on_save_pressed():
 		else:
 			printerr("Guncelleme basarisiz: ", loaded_level_path)
 			
-	elif loaded_custom_index != -1:
-		# Overwrite existing custom level at index
-		var custom_levels = []
-		if FileAccess.file_exists(custom_path):
-			var file = FileAccess.open(custom_path, FileAccess.READ)
-			if file:
-				var json_str = file.get_as_text()
-				file.close()
-				var json = JSON.new()
-				if json.parse(json_str) == OK:
-					var data = json.get_data()
-					if data is Array:
-						custom_levels = data
-						
-		if loaded_custom_index >= 0 and loaded_custom_index < custom_levels.size():
-			custom_levels[loaded_custom_index] = level_data
-			
-			var file = FileAccess.open(custom_path, FileAccess.WRITE)
-			if file:
-				var json_str = JSON.stringify(custom_levels, "\t")
-				file.store_string(json_str)
-				file.close()
-				
-				if status_label:
-					status_label.text = "Özel Seviye %d başarıyla güncellendi!" % (loaded_custom_index + 1)
-					status_label.add_theme_color_override("font_color", Color("2e7d32"))
-				build_level_list()
-			else:
-				printerr("Ozel seviye guncelleme basarisiz.")
-				
 	else:
-		# Save as a new custom level (append)
-		var custom_levels = []
-		if FileAccess.file_exists(custom_path):
-			var file = FileAccess.open(custom_path, FileAccess.READ)
-			if file:
-				var json_str = file.get_as_text()
-				file.close()
-				var json = JSON.new()
-				if json.parse(json_str) == OK:
-					var data = json.get_data()
-					if data is Array:
-						custom_levels = data
-						
-		custom_levels.append(level_data)
-		loaded_custom_index = custom_levels.size() - 1
+		# Yeni seviyeyi gercek levels klasorune yeni bir numarayla ekle
+		var dir = DirAccess.open("res://levels")
+		var max_num = 0
+		if dir:
+			dir.list_dir_begin()
+			var file_name = dir.get_next()
+			while file_name != "":
+				if file_name.begins_with("level_") and file_name.ends_with(".json"):
+					var num_str = file_name.replace("level_", "").replace(".json", "")
+					if num_str.is_valid_int():
+						var num = num_str.to_int()
+						if num > max_num:
+							max_num = num
+				file_name = dir.get_next()
+			dir.list_dir_end()
+			
+		var next_num = max_num + 1
+		var new_path = "res://levels/level_%d.json" % next_num
 		
-		var file = FileAccess.open(custom_path, FileAccess.WRITE)
+		var file = FileAccess.open(new_path, FileAccess.WRITE)
 		if file:
-			var json_str = JSON.stringify(custom_levels, "\t")
+			var json_str = JSON.stringify(level_data, "\t")
 			file.store_string(json_str)
 			file.close()
 			
+			loaded_level_path = new_path # Artik bu kayitli bir seviye oldu
+			
 			if status_label:
-				status_label.text = "Yeni Özel Seviye %d olarak kaydedildi!" % (loaded_custom_index + 1)
+				status_label.text = "Oyun veritabanına yeni seviye olarak kaydedildi: level_%d.json" % next_num
 				status_label.add_theme_color_override("font_color", Color("2e7d32"))
 			build_level_list()
 		else:
-			printerr("Yeni ozel seviye kaydetme basarisiz.")
+			printerr("Yeni seviye kaydetme basarisiz.")
 
 func _on_play_test_pressed():
 	var level_data = get_level_dictionary()
