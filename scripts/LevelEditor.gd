@@ -288,8 +288,8 @@ func update_start_marker():
 		start_marker.add_child(dot)
 		grid_manager.add_child(start_marker)
 		
-	var cell_pos = grid_manager.get_cell_world_position(player_start)
-	start_marker.position = cell_pos + Vector2(grid_manager.cell_size * 0.25, grid_manager.cell_size * 0.25)
+	var cell_local_pos = Vector2(player_start.x * grid_manager.cell_size, player_start.y * grid_manager.cell_size)
+	start_marker.position = cell_local_pos + Vector2(grid_manager.cell_size * 0.25, grid_manager.cell_size * 0.25)
 
 func _adjust_rows(delta: int):
 	var new_h = clamp(grid_height + delta, 5, 12)
