@@ -179,7 +179,7 @@ func load_level_from_json(path: String) -> bool:
 	if level_name.begins_with("level_"):
 		current_level_index = level_name.replace("level_", "").to_int()
 	
-	grid_manager.grid = level_data["grid"]
+	grid_manager.grid = level_data["grid"].duplicate(true)
 	grid_manager.grid_width = level_data["grid_size"][0]
 	grid_manager.grid_height = level_data["grid_size"][1]
 	
@@ -206,7 +206,7 @@ func load_level_from_dict(level_data: Dictionary):
 	level_cleared = false
 	current_level_index = -1
 	
-	grid_manager.grid = level_data["grid"]
+	grid_manager.grid = level_data["grid"].duplicate(true)
 	grid_manager.grid_width = level_data["grid_size"][0]
 	grid_manager.grid_height = level_data["grid_size"][1]
 	
@@ -230,10 +230,12 @@ func start_bonus_mode():
 	is_bonus_mode = true
 	game_over = false
 	level_cleared = false
-	bonus_time_left = 30.0
+	bonus_time_left = 15.0
 	diamonds_collected = 0
 	current_moves = 0
 	target_moves = 999
+	
+	show_popup("15 saniye içerisinde toplayabildiğin kadar elmas topla ve deliğe gir!\nDeliğe giremezsen kazandığın bonusları kaybedersin!", "BONUS ZAMANI")
 	
 	if restart_button:
 		restart_button.text = "PLAY AGAIN"
@@ -365,7 +367,7 @@ func win_level():
 	
 	if restart_button:
 		var next_index = current_level_index + 1
-		if next_index > 50:
+		if next_index > 100:
 			next_index = 1
 		restart_button.text = "SONRAKİ BÖLÜM (Seviye %d)" % next_index
 	
@@ -382,27 +384,54 @@ func show_victory_screen():
 			
 		var info_label = victory_screen.get_node_or_null("Panel/InfoLabel")
 		if info_label:
-			info_label.text = "Kazanılan Elmas: %d\nToplam Cüzdan: %d" % [diamonds_collected, SaveManager.gems_wallet]
-			if current_moves > target_moves:
-				var ceza = diamonds_collected
-				if (current_moves - target_moves) <= 2:
-					ceza = ceza - max(1, int(ceza / 2))
-				else:
-					ceza = ceza - min(1, ceza)
-				info_label.text += "\n(Hamle Aşımı Nedeniyle Eksik Ödül)"
+			info_label.text = "Kazanılan Altın: %d\nToplam Cüzdan: %d" % [diamonds_collected, SaveManager.gems_wallet]
 			
 		var panel = victory_screen.get_node_or_null("Panel")
 		if panel:
+			var old_cc = panel.get_node_or_null("CoinContainer")
+			if old_cc:
+				old_cc.queue_free()
+				
+			var cc = HBoxContainer.new()
+			cc.name = "CoinContainer"
+			cc.alignment = BoxContainer.ALIGNMENT_CENTER
+			cc.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+			cc.position.y += 50
+			panel.add_child(cc)
+			
+			var reward = diamonds_collected
+			if current_moves > target_moves:
+				var diff = current_moves - target_moves
+				if diff <= 2:
+					reward = max(1, int(reward / 2))
+				else:
+					reward = min(1, reward)
+			
+			for i in range(reward):
+				var coin = Label.new()
+				coin.text = "🪙"
+				coin.add_theme_font_size_override("font_size", 48)
+				coin.scale = Vector2.ZERO
+				coin.pivot_offset = Vector2(24, 24)
+				cc.add_child(coin)
+				
 			panel.scale = Vector2.ZERO
 			panel.pivot_offset = panel.size / 2.0
 			var tween = create_tween()
 			tween.tween_property(panel, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			
+			if reward > 0:
+				var coin_tween = create_tween()
+				coin_tween.tween_interval(0.4)
+				for coin in cc.get_children():
+					coin_tween.tween_property(coin, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+					coin_tween.tween_interval(0.15)
 
 func check_and_show_ad():
 	var current_time = Time.get_ticks_msec()
 	var time_diff_sec = (current_time - last_ad_time_msec) / 1000.0
 	
-	if time_diff_sec >= 180.0 or levels_cleared_since_ad >= 5:
+	if time_diff_sec >= 120.0 or levels_cleared_since_ad >= 3:
 		var ad_screen = get_node_or_null("../UI/AdScreen")
 		if ad_screen:
 			ad_screen.show()
@@ -420,7 +449,7 @@ func _on_restart_button_pressed():
 	elif level_cleared:
 		# Load next sequential level
 		var next_index = current_level_index + 1
-		if next_index > 50:
+		if next_index > 100:
 			next_index = 1
 		var next_path = "res://levels/level_%d.json" % next_index
 		load_level_from_json(next_path)
@@ -474,6 +503,9 @@ func _on_shop_item_clicked(ball_id: String):
 				if ball:
 					ball.apply_ball_profile(ball_id)
 				show_shop_status("Unlocked & Equipped: " + Ball.BALL_PROFILES[ball_id]["name"], Color("39ff14"))
+				
+				if ball_id == "iron":
+					show_popup("Demir top satın alındı!\nÇamur engelleri artık seni durduramayacak.", "DEMİR TOP")
 		else:
 			show_shop_status("Not enough gems! Need " + str(price) + " gems.", Color("ff1744"))
 			
@@ -541,12 +573,12 @@ func show_shop_status(msg: String, color: Color):
 # --- Debug and Solver ---
 
 func _on_generate_levels_pressed():
-	generate_and_save_50_levels()
+	generate_and_save_100_levels()
 
 func _on_editor_button_pressed():
 	get_tree().change_scene_to_file("res://scenes/LevelEditor.tscn")
 
-func generate_and_save_50_levels():
+func generate_and_save_100_levels():
 	if generate_levels_button:
 		generate_levels_button.disabled = true
 		
@@ -561,9 +593,9 @@ func generate_and_save_50_levels():
 			
 	var count = 0
 	var attempts = 0
-	var max_attempts = 5000 # Increased because complex levels are harder to generate
+	var max_attempts = 10000 # Increased because complex levels are harder to generate
 	
-	while count < 50 and attempts < max_attempts:
+	while count < 100 and attempts < max_attempts:
 		attempts += 1
 		var level = LevelGenerator.generate_level_for_index(count + 1)
 		if level.is_empty():
@@ -580,7 +612,7 @@ func generate_and_save_50_levels():
 			file.close()
 			
 		if debug_status_label:
-			debug_status_label.text = "Generated: %d/50 (Par: %d)" % [count, moves]
+			debug_status_label.text = "Generated: %d/100 (Par: %d)" % [count, moves]
 			
 		if count % 2 == 0:
 			await get_tree().process_frame
@@ -589,11 +621,69 @@ func generate_and_save_50_levels():
 		generate_levels_button.disabled = false
 		
 	if debug_status_label:
-		if count == 50:
-			debug_status_label.text = "Success! 50 levels saved."
+		if count == 100:
+			debug_status_label.text = "Success! 100 levels saved."
 			load_level_from_json("res://levels/level_1.json")
 		else:
-			debug_status_label.text = "Failed to generate 50 levels (attempts: %d)." % attempts
+			debug_status_label.text = "Failed to generate 100 levels (attempts: %d)." % attempts
+
+func show_popup(msg: String, title: String = "BİLGİ"):
+	var ui = get_node_or_null("../UI")
+	if not ui: return
+	
+	var popup = Panel.new()
+	popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	popup.size = Vector2(600, 300)
+	popup.position = (ui.size - popup.size) / 2.0
+	popup.z_index = 1000
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
+	style.corner_radius_top_left = 20
+	style.corner_radius_top_right = 20
+	style.corner_radius_bottom_left = 20
+	style.corner_radius_bottom_right = 20
+	style.border_width_left = 4
+	style.border_width_top = 4
+	style.border_width_right = 4
+	style.border_width_bottom = 4
+	style.border_color = Color("ffb74d")
+	popup.add_theme_stylebox_override("panel", style)
+	
+	var title_lbl = Label.new()
+	title_lbl.text = title
+	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_lbl.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	title_lbl.position.y = 20
+	title_lbl.add_theme_font_size_override("font_size", 40)
+	title_lbl.add_theme_color_override("font_color", Color("ffb74d"))
+	popup.add_child(title_lbl)
+	
+	var msg_lbl = Label.new()
+	msg_lbl.text = msg
+	msg_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	msg_lbl.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	msg_lbl.size = Vector2(540, 150)
+	msg_lbl.position = (popup.size - msg_lbl.size) / 2.0
+	msg_lbl.add_theme_font_size_override("font_size", 24)
+	popup.add_child(msg_lbl)
+	
+	var btn = Button.new()
+	btn.text = "TAMAM"
+	btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	btn.size = Vector2(200, 60)
+	btn.position = Vector2((popup.size.x - 200) / 2.0, popup.size.y - 80)
+	btn.add_theme_font_size_override("font_size", 28)
+	btn.pressed.connect(func(): popup.queue_free())
+	popup.add_child(btn)
+	
+	ui.add_child(popup)
+	
+	popup.scale = Vector2.ZERO
+	popup.pivot_offset = popup.size / 2.0
+	var tween = create_tween()
+	tween.tween_property(popup, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # --- Procedural UI Styling ---
 

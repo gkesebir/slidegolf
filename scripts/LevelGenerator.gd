@@ -2,22 +2,22 @@ extends RefCounted
 
 class_name LevelGenerator
 
-# level_index (1'den 50'ye kadar)
+# level_index (1'den 100'e kadar)
 static func generate_level_for_index(level_index: int) -> Dictionary:
-	var width = int(clamp(7 + floor((level_index - 1) / 8), 7, 12))
-	var height = int(clamp(7 + floor((level_index - 1) / 6), 7, 15))
+	var width = int(clamp(7 + floor((level_index - 1) / 5.0), 7, 20))
+	var height = int(clamp(7 + floor((level_index - 1) / 4.0), 7, 25))
 	
-	var wall_count = int(clamp(7 + floor(level_index / 2.0), 7, 30))
-	var gem_count = int(clamp(3 + floor(level_index / 10.0), 3, 8))
-	var mud_count = int(floor(level_index / 4.0)) if level_index > 10 else 0
+	var wall_count = int(clamp(7 + floor(level_index / 1.5), 7, 50))
+	var gem_count = int(clamp(3 + floor(level_index / 8.0), 3, 15))
+	var mud_count = int(floor(level_index / 3.0)) if level_index > 10 else 0
 	
 	var portal_chance = 0.0
 	if level_index >= 15:
-		portal_chance = min(0.3 + (level_index - 15) * 0.02, 0.8)
+		portal_chance = min(0.3 + (level_index - 15) * 0.015, 0.9)
 	elif level_index >= 5:
 		portal_chance = 0.15
 		
-	var target_min_moves = int(clamp(4 + floor(level_index / 4.0), 4, 15))
+	var target_min_moves = int(clamp(4 + floor(level_index / 3.0), 4, 25))
 	
 	return generate_complex_level(width, height, wall_count, gem_count, mud_count, portal_chance, target_min_moves)
 

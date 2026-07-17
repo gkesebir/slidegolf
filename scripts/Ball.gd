@@ -176,6 +176,11 @@ func slide_to(dir: Vector2i):
 				reached_hole = true
 				path_steps.append({ "pos": current, "teleport": false })
 				break
+			elif game_manager.is_bonus_mode:
+				current = next_pos
+				reached_hole = true
+				path_steps.append({ "pos": current, "teleport": false })
+				break
 			else:
 				current = next_pos
 				path_steps.append({ "pos": current, "teleport": false })
@@ -187,10 +192,13 @@ func slide_to(dir: Vector2i):
 				crossed_fragile_tiles.append(current)
 				
 		elif type == 10:
-			# Mud: stops slide instantly on entering mud tile
+			# Mud logic
 			current = next_pos
 			path_steps.append({ "pos": current, "teleport": false })
-			break
+			if SaveManager.equipped_ball == "iron":
+				pass # Iron ball bypasses mud without stopping
+			else:
+				break # Normal balls stop instantly
 			
 		else:
 			current = next_pos

@@ -2,10 +2,12 @@ extends Node
 
 # Singleton to handle player wallet and unlocked items persistently
 const SAVE_PATH = "user://save_data.json"
+const SAVE_VERSION = 2 # Incremented to force reset to 0 for Phase 4/5 testing
 
 var gems_wallet: int = 0
 var unlocked_balls: Array = ["standard"]
 var equipped_ball: String = "standard"
+var save_version: int = SAVE_VERSION
 var playtest_level_data: Dictionary = {}
 
 func _ready():
@@ -15,7 +17,8 @@ func save_game():
 	var save_dict = {
 		"gems_wallet": gems_wallet,
 		"unlocked_balls": unlocked_balls,
-		"equipped_ball": equipped_ball
+		"equipped_ball": equipped_ball,
+		"save_version": save_version
 	}
 	
 	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -45,6 +48,12 @@ func load_game():
 	var error = json.parse(json_str)
 	if error == OK:
 		var data = json.get_data()
+		var loaded_version = data.get("save_version", 1)
+		if loaded_version < SAVE_VERSION:
+			print("SaveManager: Outdated save version, resetting to defaults.")
+			reset_defaults()
+			return
+			
 		gems_wallet = int(data.get("gems_wallet", 0))
 		unlocked_balls = data.get("unlocked_balls", ["standard"])
 		equipped_ball = data.get("equipped_ball", "standard")
@@ -57,6 +66,7 @@ func reset_defaults():
 	gems_wallet = 0
 	unlocked_balls = ["standard"]
 	equipped_ball = "standard"
+	save_version = SAVE_VERSION
 	save_game()
 
 func add_gems(amount: int):
