@@ -25,8 +25,10 @@ var total_diamonds: int = 0
 var diamonds_collected: int = 0
 var current_level_path: String = ""
 var current_level_index: int = 1
-var total_diamonds: int = 0
-var diamonds_collected: int = 0
+var level_cleared: bool = false
+var current_moves: int = 0
+var target_moves: int = 0
+var game_over: bool = false
 var diamond_label: Label
 var settings_screen: Control
 
