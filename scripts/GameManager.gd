@@ -37,13 +37,26 @@ var levels_cleared_since_ad: int = 0
 func _ready():
 	last_ad_time_msec = Time.get_ticks_msec()
 	
+	# Cleanup old UI elements that are no longer used
+	var to_remove = [
+		"../UI/TopBar/DiamondLabel", 
+		"../UI/TopBar/TimerLabel", 
+		"../UI/TopBar/ShopButton", 
+		"../UI/ShopScreen", 
+		"../UI/DebugPanel"
+	]
+	for path in to_remove:
+		var node = get_node_or_null(path)
+		if node:
+			node.queue_free()
+	
 	# Re-create diamond label dynamically
 	var ui_topbar = get_node_or_null("../UI/TopBar")
 	if ui_topbar:
 		diamond_label = Label.new()
 		diamond_label.name = "DiamondLabel"
 		diamond_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
-		diamond_label.position = Vector2(40, ui_topbar.size.y / 2 - 30)
+		diamond_label.position = Vector2(40, 110 - 30) # TopBar height is 220, so center is 110
 		diamond_label.add_theme_font_size_override("font_size", 42)
 		diamond_label.add_theme_color_override("font_color", Color("37474f"))
 		ui_topbar.add_child(diamond_label)
@@ -54,7 +67,7 @@ func _ready():
 		settings_btn.text = "⚙️"
 		settings_btn.add_theme_font_size_override("font_size", 50)
 		settings_btn.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
-		settings_btn.position = Vector2(ui_topbar.size.x - 120, ui_topbar.size.y / 2 - 40)
+		settings_btn.position = Vector2(1080 - 120, 110 - 40)
 		settings_btn.size = Vector2(80, 80)
 		
 		var s_style = StyleBoxFlat.new()
