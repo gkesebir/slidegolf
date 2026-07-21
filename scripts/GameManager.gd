@@ -619,8 +619,10 @@ func _build_settings_screen():
 	var close_btn = Button.new()
 	close_btn.text = "KAPAT"
 	close_btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	close_btn.size = Vector2(300, 80)
-	close_btn.position = Vector2((panel.size.x - 300) / 2.0, panel.size.y - 120)
+	close_btn.offset_left = 100
+	close_btn.offset_right = -100
+	close_btn.offset_top = -120
+	close_btn.offset_bottom = -40
 	close_btn.add_theme_font_size_override("font_size", 40)
 	close_btn.add_theme_stylebox_override("normal", btn_style)
 	close_btn.add_theme_color_override("font_color", Color("c62828"))

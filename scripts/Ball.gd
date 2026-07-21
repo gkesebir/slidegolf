@@ -85,13 +85,17 @@ func _draw():
 	# 4. Minimalist specular reflection highlight
 	draw_circle(Vector2(-radius * 0.35, -radius * 0.35), radius * 0.25, Color(1, 1, 1, 0.4))
 
-func _input(event):
+func _unhandled_input(event):
 	if is_moving:
 		return
 		
 	# Block input if UI screens are visible
 	if game_manager:
 		if game_manager.victory_screen and game_manager.victory_screen.visible:
+			return
+		if "settings_screen" in game_manager and game_manager.settings_screen and game_manager.settings_screen.visible:
+			return
+		if "level_selection_screen" in game_manager and game_manager.level_selection_screen and game_manager.level_selection_screen.visible:
 			return
 		
 	# Keyboard controls
