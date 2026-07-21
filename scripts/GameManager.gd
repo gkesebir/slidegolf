@@ -57,7 +57,7 @@ func _ready():
 		diamond_label = Label.new()
 		diamond_label.name = "DiamondLabel"
 		diamond_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
-		diamond_label.position = Vector2(40, 110 - 30) # TopBar height is 220, so center is 110
+		diamond_label.position = Vector2(160, 110 - 30) # Moved right to make room for hamburger
 		diamond_label.add_theme_font_size_override("font_size", 42)
 		diamond_label.add_theme_color_override("font_color", Color("37474f"))
 		ui_topbar.add_child(diamond_label)
@@ -67,7 +67,7 @@ func _ready():
 		var settings_btn = Button.new()
 		settings_btn.text = "⚙️"
 		settings_btn.add_theme_font_size_override("font_size", 50)
-		settings_btn.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+		settings_btn.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		settings_btn.position = Vector2(1080 - 120, 110 - 40)
 		settings_btn.size = Vector2(80, 80)
 		
@@ -85,8 +85,21 @@ func _ready():
 		settings_btn.add_theme_color_override("font_color", Color("37474f"))
 		settings_btn.pressed.connect(_open_settings)
 		ui_topbar.add_child(settings_btn)
+		
+		# Hamburger Button dynamically
+		var hamburger_btn = Button.new()
+		hamburger_btn.text = "☰"
+		hamburger_btn.add_theme_font_size_override("font_size", 50)
+		hamburger_btn.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		hamburger_btn.position = Vector2(40, 110 - 40)
+		hamburger_btn.size = Vector2(80, 80)
+		hamburger_btn.add_theme_stylebox_override("normal", s_style)
+		hamburger_btn.add_theme_color_override("font_color", Color("37474f"))
+		hamburger_btn.pressed.connect(_open_level_selection)
+		ui_topbar.add_child(hamburger_btn)
 
 	_build_settings_screen()
+	_build_level_selection_screen()
 	
 	if not grid_manager:
 		grid_manager = get_node_or_null("../GridManager")
@@ -613,6 +626,98 @@ func _build_settings_screen():
 	close_btn.add_theme_color_override("font_color", Color("c62828"))
 	close_btn.pressed.connect(func(): settings_screen.hide())
 	panel.add_child(close_btn)
+
+
+
+var level_selection_screen: Control
+
+func _build_level_selection_screen():
+	level_selection_screen = Control.new()
+	level_selection_screen.name = "LevelSelectionScreen"
+	level_selection_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	level_selection_screen.z_index = 1000
+	level_selection_screen.hide()
+	
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.9)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	level_selection_screen.add_child(bg)
+	
+	var title = Label.new()
+	title.text = "SEVİYE SEÇİMİ"
+	title.add_theme_font_size_override("font_size", 60)
+	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.position.y = 80
+	level_selection_screen.add_child(title)
+	
+	var close_btn = Button.new()
+	close_btn.text = "✖"
+	close_btn.add_theme_font_size_override("font_size", 50)
+	close_btn.size = Vector2(100, 100)
+	close_btn.position = Vector2(1080 - 130, 60)
+	var c_style = StyleBoxFlat.new()
+	c_style.bg_color = Color("e53935")
+	c_style.corner_radius_top_left = 50
+	c_style.corner_radius_top_right = 50
+	c_style.corner_radius_bottom_left = 50
+	c_style.corner_radius_bottom_right = 50
+	close_btn.add_theme_stylebox_override("normal", c_style)
+	close_btn.pressed.connect(func(): level_selection_screen.hide())
+	level_selection_screen.add_child(close_btn)
+	
+	var scroll = ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.offset_top = 220
+	scroll.offset_bottom = -100
+	scroll.offset_left = 40
+	scroll.offset_right = -40
+	level_selection_screen.add_child(scroll)
+	
+	var grid = GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 20)
+	grid.add_theme_constant_override("v_separation", 20)
+	scroll.add_child(grid)
+	
+	for i in range(1, 101):
+		var btn = Button.new()
+		btn.text = str(i)
+		btn.add_theme_font_size_override("font_size", 40)
+		btn.custom_minimum_size = Vector2(180, 180)
+		
+		var b_style = StyleBoxFlat.new()
+		b_style.bg_color = Color("37474f")
+		b_style.corner_radius_top_left = 20
+		b_style.corner_radius_top_right = 20
+		b_style.corner_radius_bottom_left = 20
+		b_style.corner_radius_bottom_right = 20
+		btn.add_theme_stylebox_override("normal", b_style)
+		
+		btn.pressed.connect(func(): 
+			level_selection_screen.hide()
+			start_specific_level(i)
+		)
+		grid.add_child(btn)
+		
+	var ui = get_node_or_null("../UI")
+	if ui:
+		ui.add_child(level_selection_screen)
+	else:
+		add_child(level_selection_screen)
+
+func _open_level_selection():
+	if level_selection_screen:
+		level_selection_screen.show()
+
+func start_specific_level(idx: int):
+	current_level_index = idx
+	var path = "res://levels/level_%d.json" % idx
+	if FileAccess.file_exists(path):
+		load_level_from_json(path)
+	else:
+		var level_data = LevelGenerator.generate_level_for_index(idx)
+		load_level_from_dict(level_data)
 
 func _open_settings():
 	if settings_screen:
