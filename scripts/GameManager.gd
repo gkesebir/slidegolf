@@ -29,7 +29,6 @@ var level_cleared: bool = false
 var current_moves: int = 0
 var target_moves: int = 0
 var game_over: bool = false
-var diamond_label: Label
 var settings_screen: Control
 
 # Ad System State

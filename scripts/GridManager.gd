@@ -278,7 +278,6 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	flag.color = Color("ef5350")
 	flag.polygon = flag_pts
 	flag.position = Vector2(h_size / 2.0 - 5, h_size / 2.0 - 10)
-	flag.pivot_offset = Vector2(0, 10)
 	hole.add_child(flag)
 	
 	# Wind effect (Tween)
