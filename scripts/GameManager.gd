@@ -103,6 +103,7 @@ func _ready():
 		shop_buttons[1].pressed.connect(func(): _on_shop_item_clicked("iron"))
 		shop_buttons[2].pressed.connect(func(): _on_shop_item_clicked("super"))
 		
+	setup_zoom_camera()
 	style_ui()
 	initialize_game()
 
@@ -980,3 +981,57 @@ func style_ui():
 			var btn_pr = btn_style.duplicate()
 			btn_pr.bg_color = Color("e0e0e0")
 			btn.add_theme_stylebox_override("pressed", btn_pr)
+
+func setup_zoom_camera():
+	var bg = get_node_or_null("../Background")
+	if bg and bg is ColorRect:
+		bg.size = Vector2(10000, 10000)
+		bg.position = Vector2(-4000, -4000)
+		
+	var cam = Camera2D.new()
+	cam.name = "MainCamera"
+	cam.position = Vector2(540, 960)
+	get_node("/root/Main").add_child(cam)
+	
+	var ui = get_node_or_null("../UI")
+	if not ui: return
+	
+	var zoom_in_btn = Button.new()
+	zoom_in_btn.text = "🔍+"
+	zoom_in_btn.add_theme_font_size_override("font_size", 40)
+	zoom_in_btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	zoom_in_btn.position = Vector2(1080 - 130, 1920 - 260)
+	zoom_in_btn.size = Vector2(100, 100)
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.5)
+	style.corner_radius_top_left = 50
+	style.corner_radius_top_right = 50
+	style.corner_radius_bottom_left = 50
+	style.corner_radius_bottom_right = 50
+	zoom_in_btn.add_theme_stylebox_override("normal", style)
+	zoom_in_btn.add_theme_stylebox_override("hover", style)
+	zoom_in_btn.add_theme_stylebox_override("pressed", style)
+	
+	zoom_in_btn.pressed.connect(func():
+		var current = cam.zoom
+		cam.zoom = Vector2(current.x + 0.1, current.y + 0.1)
+	)
+	ui.add_child(zoom_in_btn)
+	
+	var zoom_out_btn = Button.new()
+	zoom_out_btn.text = "🔍-"
+	zoom_out_btn.add_theme_font_size_override("font_size", 40)
+	zoom_out_btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	zoom_out_btn.position = Vector2(1080 - 130, 1920 - 140)
+	zoom_out_btn.size = Vector2(100, 100)
+	zoom_out_btn.add_theme_stylebox_override("normal", style)
+	zoom_out_btn.add_theme_stylebox_override("hover", style)
+	zoom_out_btn.add_theme_stylebox_override("pressed", style)
+	
+	zoom_out_btn.pressed.connect(func():
+		var current = cam.zoom
+		if current.x > 0.3:
+			cam.zoom = Vector2(current.x - 0.1, current.y - 0.1)
+	)
+	ui.add_child(zoom_out_btn)

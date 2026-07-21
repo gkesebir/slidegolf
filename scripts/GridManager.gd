@@ -63,6 +63,32 @@ func create_cell_visual(grid_pos: Vector2i, type: int):
 		else:
 			bg_rect.color = Color("87c380") # Darker pastel green
 		add_child(bg_rect)
+	else:
+		# Distinct void cell styling (depressed empty tile)
+		var void_bg = ColorRect.new()
+		void_bg.size = Vector2(cell_size, cell_size)
+		void_bg.position = cell_pos
+		void_bg.color = Color("b0bec5") # dark grayish blue edge
+		add_child(void_bg)
+		
+		var void_inner = ColorRect.new()
+		void_inner.size = Vector2(cell_size - 6, cell_size - 6)
+		void_inner.position = cell_pos + Vector2(3, 3)
+		void_inner.color = Color("cfd8dc") # lighter gray inside
+		add_child(void_inner)
+		
+		# Cross mark inside void
+		var cross1 = ColorRect.new()
+		cross1.size = Vector2(cell_size * 0.4, 4)
+		cross1.position = cell_pos + Vector2(cell_size * 0.3, cell_size * 0.5 - 2)
+		cross1.pivot_offset = Vector2(cell_size * 0.2, 2)
+		cross1.rotation = deg_to_rad(45)
+		cross1.color = Color(0, 0, 0, 0.1)
+		add_child(cross1)
+		
+		var cross2 = cross1.duplicate()
+		cross2.rotation = deg_to_rad(-45)
+		add_child(cross2)
 	
 	# 1. Wall (1)
 	if type == 1:
@@ -248,15 +274,17 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	stick_shadow.color = Color(0, 0, 0, 0.15)
 	hole.add_child(stick_shadow)
 	
-	# Flag shadow (shifted slightly right/down)
-	var flag_shadow = Panel.new()
-	flag_shadow.size = Vector2(20, 14)
-	flag_shadow.position = Vector2(h_size / 2.0 + 6, h_size * 0.22)
-	var fs = StyleBoxFlat.new()
-	fs.bg_color = Color(0, 0, 0, 0.15)
-	fs.corner_radius_top_right = 4
-	fs.corner_radius_bottom_right = 4
-	flag_shadow.add_theme_stylebox_override("panel", fs)
+	# Triangular flag shadow (shifted slightly right/down)
+	var flag_pts = PackedVector2Array([
+		Vector2(0, 0),
+		Vector2(18, 9),
+		Vector2(0, 18)
+	])
+	
+	var flag_shadow = Polygon2D.new()
+	flag_shadow.color = Color(0, 0, 0, 0.15)
+	flag_shadow.polygon = flag_pts
+	flag_shadow.position = Vector2(h_size / 2.0 + 4, h_size * 0.15 + 4)
 	hole.add_child(flag_shadow)
 	
 	# Actual flagpole stick
@@ -266,15 +294,11 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	stick.color = Color("ffffff")
 	hole.add_child(stick)
 	
-	# Actual red flag
-	var flag = Panel.new()
-	flag.size = Vector2(20, 14)
-	flag.position = Vector2(h_size / 2.0 + 2, h_size * 0.15)
-	var flag_style = StyleBoxFlat.new()
-	flag_style.bg_color = Color("ef5350") # Pastel red
-	flag_style.corner_radius_top_right = 4
-	flag_style.corner_radius_bottom_right = 4
-	flag.add_theme_stylebox_override("panel", flag_style)
+	# Actual red triangular flag
+	var flag = Polygon2D.new()
+	flag.color = Color("ef5350")
+	flag.polygon = flag_pts
+	flag.position = Vector2(h_size / 2.0, h_size * 0.15)
 	hole.add_child(flag)
 	
 	hole_node = hole
