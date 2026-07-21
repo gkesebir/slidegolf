@@ -174,10 +174,15 @@ func slide_to(dir: Vector2i):
 				continue
 				
 		if type == 3:
-			current = next_pos
-			reached_hole = true
-			path_steps.append({ "pos": current, "teleport": false })
-			break
+			if game_manager and game_manager.has_method("all_diamonds_collected") and game_manager.all_diamonds_collected():
+				current = next_pos
+				reached_hole = true
+				path_steps.append({ "pos": current, "teleport": false })
+				break
+			else:
+				# Acts as a normal tile if diamonds are not all collected
+				current = next_pos
+				path_steps.append({ "pos": current, "teleport": false })
 				
 		elif type == 8:
 			current = next_pos
@@ -228,6 +233,11 @@ func on_reach_cell(cell_pos: Vector2i):
 	
 	var type = grid_manager.get_cell_type(cell_pos)
 	
+	if type == 2:
+		grid_manager.remove_diamond_visual(cell_pos)
+		if game_manager and game_manager.has_method("collect_diamond"):
+			game_manager.collect_diamond()
+			
 	if type == 8:
 		grid_manager.crack_fragile_tile(cell_pos)
 

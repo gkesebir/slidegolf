@@ -9,6 +9,7 @@ var timer_active = false
 
 func _ready():
 	hide()
+	z_index = 2000 # Ensure it's above everything
 	if close_button:
 		close_button.pressed.connect(_on_close_pressed)
 
@@ -20,7 +21,7 @@ func _process(delta):
 			timer_active = false
 			if close_button:
 				close_button.disabled = false
-				close_button.text = "KAPAT (X)"
+				close_button.text = "REKLAMI GEÇ"
 		
 		if timer_label and timer_active:
 			timer_label.text = "Reklamı geçmek için %d saniye..." % ceil(time_left)
@@ -28,6 +29,7 @@ func _process(delta):
 func start_ad_timer():
 	time_left = 3.0
 	timer_active = true
+	show()
 	if close_button:
 		close_button.disabled = true
 		close_button.text = "Lütfen Bekleyin"

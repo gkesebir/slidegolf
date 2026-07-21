@@ -267,39 +267,26 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	hole.add_theme_stylebox_override("panel", style)
 	add_child(hole)
 	
-	# Flagpole shadow (shifted slightly right/down)
-	var stick_shadow = ColorRect.new()
-	stick_shadow.size = Vector2(4, h_size * 0.7)
-	stick_shadow.position = Vector2(h_size / 2.0 + 2, h_size * 0.22)
-	stick_shadow.color = Color(0, 0, 0, 0.15)
-	hole.add_child(stick_shadow)
-	
-	# Triangular flag shadow (shifted slightly right/down)
+	# Triangular flag right in the center
 	var flag_pts = PackedVector2Array([
 		Vector2(0, 0),
-		Vector2(18, 9),
-		Vector2(0, 18)
+		Vector2(20, 10),
+		Vector2(0, 20)
 	])
 	
-	var flag_shadow = Polygon2D.new()
-	flag_shadow.color = Color(0, 0, 0, 0.15)
-	flag_shadow.polygon = flag_pts
-	flag_shadow.position = Vector2(h_size / 2.0 + 4, h_size * 0.15 + 4)
-	hole.add_child(flag_shadow)
-	
-	# Actual flagpole stick
-	var stick = ColorRect.new()
-	stick.size = Vector2(4, h_size * 0.7)
-	stick.position = Vector2(h_size / 2.0 - 2, h_size * 0.15)
-	stick.color = Color("ffffff")
-	hole.add_child(stick)
-	
-	# Actual red triangular flag
 	var flag = Polygon2D.new()
 	flag.color = Color("ef5350")
 	flag.polygon = flag_pts
-	flag.position = Vector2(h_size / 2.0, h_size * 0.15)
+	flag.position = Vector2(h_size / 2.0 - 5, h_size / 2.0 - 10)
+	flag.pivot_offset = Vector2(0, 10)
 	hole.add_child(flag)
+	
+	# Wind effect (Tween)
+	var tween = create_tween().set_loops()
+	tween.tween_property(flag, "scale:x", 0.7, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(flag, "scale:x", 1.0, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(flag, "rotation", deg_to_rad(5), 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(flag, "rotation", deg_to_rad(-5), 0.4).set_delay(0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	
 	hole_node = hole
 
