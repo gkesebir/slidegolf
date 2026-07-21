@@ -118,6 +118,7 @@ func _ready():
 	_select_tool(1) # Default: Wall
 	update_start_marker()
 	style_editor_ui()
+	setup_zoom_camera()
 	_update_grid_labels()
 	build_level_list()
 	validate_and_update_status()
@@ -532,6 +533,42 @@ func validate_and_update_status():
 	else:
 		status_label.text = "Durum: Çözülemez (Hatalı)"
 		status_label.add_theme_color_override("font_color", Color("ef5350"))
+
+func setup_zoom_camera():
+	var ui = get_node_or_null("UI")
+	if not ui:
+		ui = self # Fallback to Control
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.5)
+	style.corner_radius_top_left = 50
+	style.corner_radius_top_right = 50
+	style.corner_radius_bottom_left = 50
+	style.corner_radius_bottom_right = 50
+	
+	var zoom_in_btn = Button.new()
+	zoom_in_btn.text = "🔍+"
+	zoom_in_btn.add_theme_font_size_override("font_size", 40)
+	zoom_in_btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	zoom_in_btn.position = Vector2(1080 - 130, 1920 - 260)
+	zoom_in_btn.size = Vector2(100, 100)
+	zoom_in_btn.add_theme_stylebox_override("normal", style)
+	zoom_in_btn.add_theme_stylebox_override("hover", style)
+	zoom_in_btn.add_theme_stylebox_override("pressed", style)
+	zoom_in_btn.pressed.connect(func(): _adjust_zoom(0.1))
+	ui.add_child(zoom_in_btn)
+	
+	var zoom_out_btn = Button.new()
+	zoom_out_btn.text = "🔍-"
+	zoom_out_btn.add_theme_font_size_override("font_size", 40)
+	zoom_out_btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	zoom_out_btn.position = Vector2(1080 - 130, 1920 - 140)
+	zoom_out_btn.size = Vector2(100, 100)
+	zoom_out_btn.add_theme_stylebox_override("normal", style)
+	zoom_out_btn.add_theme_stylebox_override("hover", style)
+	zoom_out_btn.add_theme_stylebox_override("pressed", style)
+	zoom_out_btn.pressed.connect(func(): _adjust_zoom(-0.1))
+	ui.add_child(zoom_out_btn)
 
 func _on_save_pressed():
 	var level_data = get_level_dictionary()

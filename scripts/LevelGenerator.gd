@@ -8,7 +8,7 @@ static func generate_level_for_index(level_index: int) -> Dictionary:
 	var height = int(clamp(7 + floor((level_index - 1) / 4.0), 7, 25))
 	
 	var wall_count = int(clamp(7 + floor(level_index / 1.5), 7, 50))
-	var gem_count = int(clamp(3 + floor(level_index / 8.0), 3, 15))
+	var gem_count = 0
 	var mud_count = int(floor(level_index / 3.0)) if level_index > 10 else 0
 	
 	var portal_chance = 0.0

@@ -17,19 +17,6 @@ class_name GameManager
 @export var generate_levels_button: Button
 @export var editor_button: Button
 
-# Phase 3 UI Nodes
-@export var timer_label: Label
-@export var play_bonus_mode_button: Button
-
-# Phase 4 Shop UI Nodes
-@export var shop_button: Button
-@export var shop_screen: Control
-@export var shop_close_button: Button
-@export var shop_gems_label: Label
-@export var shop_status_label: Label
-@export var shop_item_buttons: Array[NodePath] # Array paths: 0 = standard, 1 = iron, 2 = super
-var shop_buttons: Array[Button] = []
-
 # Phase 5 Audio UI
 @export var mute_button: CheckButton
 
@@ -41,26 +28,21 @@ var current_level_index: int = 1
 var level_cleared: bool = false
 var current_moves: int = 0
 var target_moves: int = 0
-
-# Phase 3 Bonus Mode state
-var is_bonus_mode: bool = false
-var bonus_time_left: float = 30.0
 var game_over: bool = false
 
 # Ad System State
 var last_ad_time_msec: int = 0
 var levels_cleared_since_ad: int = 0
 
-# Phase 4 Shop pricing
-const BALL_PRICES = {
-	"standard": 0,
-	"iron": 20,
-	"super": 50
-}
-
 func _ready():
 	last_ad_time_msec = Time.get_ticks_msec()
 	
+	# Cleanup removed UI nodes
+	for path in ["../UI/TopBar/DiamondLabel", "../UI/TopBar/TimerLabel", "../UI/TopBar/ShopButton", "../UI/ShopScreen", "../UI/DebugPanel/PlayBonusButton"]:
+		var node = get_node_or_null(path)
+		if node:
+			node.queue_free()
+			
 	if not grid_manager:
 		grid_manager = get_node_or_null("../GridManager")
 	if not ball:
@@ -78,61 +60,27 @@ func _ready():
 	if editor_button:
 		editor_button.pressed.connect(_on_editor_button_pressed)
 		
-	if play_bonus_mode_button:
-		play_bonus_mode_button.pressed.connect(_on_play_bonus_mode_pressed)
-		
-	# Phase 4 Shop UI Connections
-	if shop_button:
-		shop_button.pressed.connect(_on_shop_button_pressed)
-	if shop_close_button:
-		shop_close_button.pressed.connect(_on_shop_close_button_pressed)
-	
 	# Phase 5 Mute button connection
 	if mute_button:
 		mute_button.toggled.connect(_on_mute_toggled)
-		
-	# Resolve shop buttons from NodePaths
-	shop_buttons.clear()
-	for path in shop_item_buttons:
-		var node = get_node_or_null(path)
-		if node is Button:
-			shop_buttons.append(node)
-			
-	if shop_buttons.size() >= 3:
-		shop_buttons[0].pressed.connect(func(): _on_shop_item_clicked("standard"))
-		shop_buttons[1].pressed.connect(func(): _on_shop_item_clicked("iron"))
-		shop_buttons[2].pressed.connect(func(): _on_shop_item_clicked("super"))
 		
 	setup_zoom_camera()
 	style_ui()
 	initialize_game()
 
 func _process(delta):
-	# Update countdown timer in Bonus Mode
-	if is_bonus_mode and not game_over:
-		bonus_time_left -= delta
-		if bonus_time_left <= 0.0:
-			bonus_time_left = 0.0
-			end_bonus_level()
-		update_timer_label()
+	pass
 
 func initialize_game():
 	if not grid_manager or not ball:
 		printerr("GameManager: GridManager or Ball is not assigned!")
 		return
 		
-	is_bonus_mode = false
 	game_over = false
 	level_cleared = false
 	
 	if restart_button:
-		restart_button.text = "PLAY AGAIN"
-		
-	if timer_label:
-		timer_label.hide()
-		
-	if shop_screen:
-		shop_screen.hide()
+		restart_button.text = "TEKRAR OYNA"
 		
 	if not SaveManager.playtest_level_data.is_empty():
 		var level_data = SaveManager.playtest_level_data.duplicate()
@@ -145,8 +93,7 @@ func initialize_game():
 		load_level_from_json(level1_path)
 	else:
 		current_level_path = ""
-		total_diamonds = count_diamonds_in_grid()
-		diamonds_collected = 0
+		current_moves = 0
 		update_ui()
 		
 		if victory_screen:
@@ -186,8 +133,6 @@ func load_level_from_json(path: String) -> bool:
 	
 	grid_manager.reset_grid()
 	
-	total_diamonds = count_diamonds_in_grid()
-	diamonds_collected = 0
 	current_moves = 0
 	target_moves = level_data.get("min_moves", 0)
 	if target_moves <= 0:
@@ -213,8 +158,6 @@ func load_level_from_dict(level_data: Dictionary):
 	
 	grid_manager.reset_grid()
 	
-	total_diamonds = count_diamonds_in_grid()
-	diamonds_collected = 0
 	current_moves = 0
 	target_moves = level_data.get("min_moves", 0)
 	if target_moves <= 0:
@@ -227,63 +170,6 @@ func load_level_from_dict(level_data: Dictionary):
 	if victory_screen:
 		victory_screen.hide()
 
-func start_bonus_mode():
-	is_bonus_mode = true
-	game_over = false
-	level_cleared = false
-	bonus_time_left = 15.0
-	diamonds_collected = 0
-	current_moves = 0
-	target_moves = 999
-	
-	show_popup("15 saniye içerisinde toplayabildiğin kadar elmas topla ve deliğe gir!\nDeliğe giremezsen kazandığın bonusları kaybedersin!", "BONUS ZAMANI")
-	
-	if restart_button:
-		restart_button.text = "PLAY AGAIN"
-		
-	grid_manager.reset_grid()
-	total_diamonds = count_diamonds_in_grid()
-	
-	if timer_label:
-		timer_label.show()
-		update_timer_label()
-		
-	update_ui()
-	
-	if victory_screen:
-		victory_screen.hide()
-		
-	ball.initialize(Vector2i(1, 1), grid_manager, self)
-
-func end_bonus_level():
-	game_over = true
-	
-	# Add collected gems to the persistent wallet
-	SaveManager.add_gems(diamonds_collected)
-	update_ui()
-	
-	if restart_button:
-		restart_button.text = "PLAY AGAIN"
-		
-	if victory_screen:
-		victory_screen.show()
-		
-		var title_label = victory_screen.get_node_or_null("Panel/VictoryLabel")
-		if title_label:
-			title_label.text = "TIME'S UP!"
-			title_label.add_theme_color_override("font_color", Color("ff9100"))
-			
-		var info_label = victory_screen.get_node_or_null("Panel/InfoLabel")
-		if info_label:
-			info_label.text = "Gems Collected: %d\nTotal Wallet: %d" % [diamonds_collected, SaveManager.gems_wallet]
-			
-		var panel = victory_screen.get_node_or_null("Panel")
-		if panel:
-			panel.scale = Vector2.ZERO
-			panel.pivot_offset = panel.size / 2.0
-			var tween = create_tween()
-			tween.tween_property(panel, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
 func count_diamonds_in_grid() -> int:
 	var count = 0
 	for y in range(grid_manager.grid_height):
@@ -294,16 +180,6 @@ func count_diamonds_in_grid() -> int:
 
 func collect_diamond():
 	diamonds_collected += 1
-	
-	if is_bonus_mode:
-		bonus_time_left += 1.5
-		update_timer_label()
-		
-		var new_pos = grid_manager.find_random_empty_cell()
-		if new_pos != Vector2i(-1, -1):
-			grid_manager.spawn_diamond_at(new_pos)
-			total_diamonds = count_diamonds_in_grid()
-	
 	update_ui()
 
 func all_diamonds_collected() -> bool:
@@ -312,40 +188,29 @@ func all_diamonds_collected() -> bool:
 func update_ui():
 	if diamond_label:
 		var level_str = ""
-		if current_level_index > 0 and not is_bonus_mode:
+		if current_level_index > 0:
 			level_str = "SEVİYE %d | " % current_level_index
 			
-		if is_bonus_mode:
-			diamond_label.text = "BONUS ZAMANI! | 💎 %d / %d" % [diamonds_collected, total_diamonds]
-		else:
-			diamond_label.text = "%s💎 %d / %d | 🪙 %d" % [level_str, diamonds_collected, total_diamonds, SaveManager.gems_wallet]
+		diamond_label.text = "%s💎 %d / %d" % [level_str, diamonds_collected, total_diamonds]
 			
 	if move_label:
-		if is_bonus_mode:
-			move_label.visible = false
-		else:
-			move_label.visible = true
-			move_label.text = "%d/%d" % [current_moves, target_moves]
+		move_label.text = "%d/%d" % [current_moves, target_moves]
 			
-			if current_moves <= target_moves:
-				move_label.add_theme_color_override("font_color", Color("2e7d32")) # Yesil
+		if current_moves <= target_moves:
+			move_label.add_theme_color_override("font_color", Color("2e7d32")) # Yesil
+		else:
+			var diff = current_moves - target_moves
+			if diff == 1:
+				move_label.add_theme_color_override("font_color", Color("f57c00")) # Turuncu
+			elif diff == 2:
+				move_label.add_theme_color_override("font_color", Color("e65100")) # Koyu Turuncu
 			else:
-				var diff = current_moves - target_moves
-				if diff == 1:
-					move_label.add_theme_color_override("font_color", Color("f57c00")) # Turuncu
-				elif diff == 2:
-					move_label.add_theme_color_override("font_color", Color("e65100")) # Koyu Turuncu
-				else:
-					move_label.add_theme_color_override("font_color", Color("c62828")) # Kirmizi
+				move_label.add_theme_color_override("font_color", Color("c62828")) # Kirmizi
 
 func increment_move():
 	if not game_over and not level_cleared:
 		current_moves += 1
 		update_ui()
-
-func update_timer_label():
-	if timer_label:
-		timer_label.text = "TIME: %.1fs" % bonus_time_left
 
 func win_level():
 	print("Level Cleared!")
@@ -385,7 +250,7 @@ func show_victory_screen():
 			
 		var info_label = victory_screen.get_node_or_null("Panel/InfoLabel")
 		if info_label:
-			info_label.text = "Kazanılan Altın: %d\nToplam Cüzdan: %d" % [diamonds_collected, SaveManager.gems_wallet]
+			info_label.text = "Tebrikler!\nHamle: %d/%d" % [current_moves, target_moves]
 			
 		var panel = victory_screen.get_node_or_null("Panel")
 		if panel:
@@ -393,40 +258,10 @@ func show_victory_screen():
 			if old_cc:
 				old_cc.queue_free()
 				
-			var cc = HBoxContainer.new()
-			cc.name = "CoinContainer"
-			cc.alignment = BoxContainer.ALIGNMENT_CENTER
-			cc.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-			cc.position.y += 50
-			panel.add_child(cc)
-			
-			var reward = diamonds_collected
-			if current_moves > target_moves:
-				var diff = current_moves - target_moves
-				if diff <= 2:
-					reward = max(1, int(reward / 2))
-				else:
-					reward = min(1, reward)
-			
-			for i in range(reward):
-				var coin = Label.new()
-				coin.text = "🪙"
-				coin.add_theme_font_size_override("font_size", 48)
-				coin.scale = Vector2.ZERO
-				coin.pivot_offset = Vector2(24, 24)
-				cc.add_child(coin)
-				
 			panel.scale = Vector2.ZERO
 			panel.pivot_offset = panel.size / 2.0
 			var tween = create_tween()
 			tween.tween_property(panel, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-			
-			if reward > 0:
-				var coin_tween = create_tween()
-				coin_tween.tween_interval(0.4)
-				for coin in cc.get_children():
-					coin_tween.tween_property(coin, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-					coin_tween.tween_interval(0.15)
 
 func check_and_show_ad():
 	var current_time = Time.get_ticks_msec()
@@ -445,9 +280,7 @@ func check_and_show_ad():
 		show_victory_screen()
 
 func _on_restart_button_pressed():
-	if is_bonus_mode:
-		start_bonus_mode()
-	elif level_cleared:
+	if level_cleared:
 		# Load next sequential level
 		var next_index = current_level_index + 1
 		if next_index > 100:
@@ -459,117 +292,10 @@ func _on_restart_button_pressed():
 	else:
 		initialize_game()
 
-func _on_play_bonus_mode_pressed():
-	start_bonus_mode()
-
 func _on_mute_toggled(button_pressed: bool):
 	AudioController.toggle_mute(button_pressed)
 	if mute_button:
 		mute_button.text = "SES KAPALI" if button_pressed else "SES"
-
-# --- Shop UI Logic ---
-
-func _on_shop_button_pressed():
-	if shop_screen:
-		shop_screen.show()
-		refresh_shop_ui()
-		
-		var panel = shop_screen.get_node_or_null("Panel")
-		if panel:
-			panel.scale = Vector2.ZERO
-			panel.pivot_offset = panel.size / 2.0
-			var tween = create_tween()
-			tween.tween_property(panel, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-func _on_shop_close_button_pressed():
-	if shop_screen:
-		shop_screen.hide()
-
-func _on_shop_item_clicked(ball_id: String):
-	var is_unlocked = SaveManager.unlocked_balls.has(ball_id)
-	
-	if is_unlocked:
-		# Equip
-		SaveManager.equip_ball(ball_id)
-		if ball:
-			ball.apply_ball_profile(ball_id)
-		show_shop_status("Equipped: " + Ball.BALL_PROFILES[ball_id]["name"], Color("00e5ff"))
-	else:
-		# Buy
-		var price = BALL_PRICES.get(ball_id, 999)
-		if SaveManager.gems_wallet >= price:
-			if SaveManager.deduct_gems(price):
-				SaveManager.unlock_ball(ball_id)
-				SaveManager.equip_ball(ball_id)
-				if ball:
-					ball.apply_ball_profile(ball_id)
-				show_shop_status("Unlocked & Equipped: " + Ball.BALL_PROFILES[ball_id]["name"], Color("39ff14"))
-				
-				if ball_id == "iron":
-					show_popup("Demir top satın alındı!\nÇamur engelleri artık seni durduramayacak.", "DEMİR TOP")
-		else:
-			show_shop_status("Not enough gems! Need " + str(price) + " gems.", Color("ff1744"))
-			
-	refresh_shop_ui()
-	update_ui()
-
-func refresh_shop_ui():
-	if shop_gems_label:
-		shop_gems_label.text = "GEMS: %d" % SaveManager.gems_wallet
-		
-	# Refresh button texts
-	if shop_buttons.size() >= 3:
-		update_item_button_state(shop_buttons[0], "standard")
-		update_item_button_state(shop_buttons[1], "iron")
-		update_item_button_state(shop_buttons[2], "super")
-
-func update_item_button_state(btn: Button, ball_id: String):
-	if not btn:
-		return
-	
-	var is_unlocked = SaveManager.unlocked_balls.has(ball_id)
-	var is_equipped = SaveManager.equipped_ball == ball_id
-	
-	if is_equipped:
-		btn.text = "EQUIPPED"
-		btn.disabled = true
-		var style = btn.get_theme_stylebox("normal").duplicate()
-		style.bg_color = Color("cfd8dc") # Pastel gray disabled
-		style.border_color = Color("90a4ae")
-		style.shadow_size = 0
-		btn.add_theme_stylebox_override("normal", style)
-		btn.add_theme_color_override("font_color", Color("78909c"))
-	elif is_unlocked:
-		btn.text = "EQUIP"
-		btn.disabled = false
-		var style = btn.get_theme_stylebox("normal").duplicate()
-		style.bg_color = Color("ffffff")
-		style.border_color = Color("29b6f6") # Pastel blue
-		style.shadow_color = Color("29b6f6", 0.1)
-		style.shadow_size = 3
-		btn.add_theme_stylebox_override("normal", style)
-		btn.add_theme_color_override("font_color", Color("0288d1"))
-	else:
-		var price = BALL_PRICES.get(ball_id, 0)
-		btn.text = "BUY: %d GEMS" % price
-		btn.disabled = false
-		var style = btn.get_theme_stylebox("normal").duplicate()
-		style.bg_color = Color("ffffff")
-		style.border_color = Color("ffb74d") # Pastel orange
-		style.shadow_color = Color("ffb74d", 0.1)
-		style.shadow_size = 3
-		btn.add_theme_stylebox_override("normal", style)
-		btn.add_theme_color_override("font_color", Color("f57c00"))
-
-func show_shop_status(msg: String, color: Color):
-	if shop_status_label:
-		shop_status_label.text = msg
-		shop_status_label.add_theme_color_override("font_color", color)
-		
-		# Fade animation
-		shop_status_label.modulate.a = 1.0
-		var tween = create_tween()
-		tween.tween_property(shop_status_label, "modulate:a", 0.0, 3.0).set_delay(1.0)
 
 # --- Debug and Solver ---
 
@@ -628,72 +354,12 @@ func generate_and_save_100_levels():
 		else:
 			debug_status_label.text = "Failed to generate 100 levels (attempts: %d)." % attempts
 
-func show_popup(msg: String, title: String = "BİLGİ"):
-	var ui = get_node_or_null("../UI")
-	if not ui: return
-	
-	var popup = Panel.new()
-	popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	popup.size = Vector2(600, 300)
-	popup.position = (ui.size - popup.size) / 2.0
-	popup.z_index = 1000
-	
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
-	style.corner_radius_top_left = 20
-	style.corner_radius_top_right = 20
-	style.corner_radius_bottom_left = 20
-	style.corner_radius_bottom_right = 20
-	style.border_width_left = 4
-	style.border_width_top = 4
-	style.border_width_right = 4
-	style.border_width_bottom = 4
-	style.border_color = Color("ffb74d")
-	popup.add_theme_stylebox_override("panel", style)
-	
-	var title_lbl = Label.new()
-	title_lbl.text = title
-	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_lbl.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	title_lbl.position.y = 20
-	title_lbl.add_theme_font_size_override("font_size", 40)
-	title_lbl.add_theme_color_override("font_color", Color("ffb74d"))
-	popup.add_child(title_lbl)
-	
-	var msg_lbl = Label.new()
-	msg_lbl.text = msg
-	msg_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	msg_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	msg_lbl.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	msg_lbl.size = Vector2(540, 150)
-	msg_lbl.position = (popup.size - msg_lbl.size) / 2.0
-	msg_lbl.add_theme_font_size_override("font_size", 24)
-	popup.add_child(msg_lbl)
-	
-	var btn = Button.new()
-	btn.text = "TAMAM"
-	btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	btn.size = Vector2(200, 60)
-	btn.position = Vector2((popup.size.x - 200) / 2.0, popup.size.y - 80)
-	btn.add_theme_font_size_override("font_size", 28)
-	btn.pressed.connect(func(): popup.queue_free())
-	popup.add_child(btn)
-	
-	ui.add_child(popup)
-	
-	popup.scale = Vector2.ZERO
-	popup.pivot_offset = popup.size / 2.0
-	var tween = create_tween()
-	tween.tween_property(popup, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
 # --- Procedural UI Styling ---
 
 func style_ui():
 	# Override TopBar labels for minimalist look
 	if diamond_label:
 		diamond_label.add_theme_color_override("font_color", Color("37474f")) # Dark slate gray
-	if timer_label:
-		timer_label.add_theme_color_override("font_color", Color("c62828")) # Pastel red
 
 	# 1. Victory Panel
 	var panel = victory_screen.get_node_or_null("Panel") if victory_screen else null
@@ -816,171 +482,6 @@ func style_ui():
 		editor_button.add_theme_color_override("font_color", Color("0288d1"))
 		editor_button.add_theme_color_override("font_hover_color", Color("01579b"))
 		editor_button.add_theme_color_override("font_pressed_color", Color("01579b"))
-
-	# 4. Play Bonus Mode Button
-	if play_bonus_mode_button:
-		var btn_normal = StyleBoxFlat.new()
-		btn_normal.bg_color = Color("ffffff")
-		btn_normal.border_color = Color("ffb74d") # Pastel Orange
-		btn_normal.border_width_left = 2
-		btn_normal.border_width_right = 2
-		btn_normal.border_width_top = 2
-		btn_normal.border_width_bottom = 2
-		btn_normal.corner_radius_top_left = 12
-		btn_normal.corner_radius_top_right = 12
-		btn_normal.corner_radius_bottom_left = 12
-		btn_normal.corner_radius_bottom_right = 12
-		btn_normal.shadow_color = Color(0, 0, 0, 0.05)
-		btn_normal.shadow_size = 2
-		
-		var btn_hover = btn_normal.duplicate()
-		btn_hover.bg_color = Color("fff3e0")
-		btn_hover.shadow_size = 4
-		
-		var btn_pressed = btn_normal.duplicate()
-		btn_pressed.bg_color = Color("ffe0b2")
-		btn_pressed.shadow_size = 1
-		
-		play_bonus_mode_button.add_theme_stylebox_override("normal", btn_normal)
-		play_bonus_mode_button.add_theme_stylebox_override("hover", btn_hover)
-		play_bonus_mode_button.add_theme_stylebox_override("pressed", btn_pressed)
-		
-		play_bonus_mode_button.add_theme_color_override("font_color", Color("e65100"))
-		play_bonus_mode_button.add_theme_color_override("font_hover_color", Color("bf360c"))
-		play_bonus_mode_button.add_theme_color_override("font_pressed_color", Color("bf360c"))
-
-	# 5. Shop Button
-	if shop_button:
-		var btn_normal = StyleBoxFlat.new()
-		btn_normal.bg_color = Color("ffffff")
-		btn_normal.border_color = Color("ffd54f") # Pastel Yellow
-		btn_normal.border_width_left = 2
-		btn_normal.border_width_right = 2
-		btn_normal.border_width_top = 2
-		btn_normal.border_width_bottom = 2
-		btn_normal.corner_radius_top_left = 12
-		btn_normal.corner_radius_top_right = 12
-		btn_normal.corner_radius_bottom_left = 12
-		btn_normal.corner_radius_bottom_right = 12
-		btn_normal.shadow_color = Color(0, 0, 0, 0.05)
-		btn_normal.shadow_size = 2
-		
-		var btn_hover = btn_normal.duplicate()
-		btn_hover.bg_color = Color("fffde7")
-		btn_hover.shadow_size = 4
-		
-		var btn_pressed = btn_normal.duplicate()
-		btn_pressed.bg_color = Color("fff9c4")
-		btn_pressed.shadow_size = 1
-		
-		shop_button.add_theme_stylebox_override("normal", btn_normal)
-		shop_button.add_theme_stylebox_override("hover", btn_hover)
-		shop_button.add_theme_stylebox_override("pressed", btn_pressed)
-		
-		shop_button.add_theme_color_override("font_color", Color("f57f17"))
-		shop_button.add_theme_color_override("font_hover_color", Color("e65100"))
-		shop_button.add_theme_color_override("font_pressed_color", Color("e65100"))
-
-	# 6. Shop Panel Overlay
-	var shop_panel = shop_screen.get_node_or_null("Panel") if shop_screen else null
-	if shop_panel:
-		var panel_style = StyleBoxFlat.new()
-		panel_style.bg_color = Color("ffffff") # White shop panel background
-		panel_style.border_color = Color("ffd54f") # Pastel Yellow
-		panel_style.border_width_left = 4
-		panel_style.border_width_right = 4
-		panel_style.border_width_top = 4
-		panel_style.border_width_bottom = 4
-		panel_style.corner_radius_top_left = 24
-		panel_style.corner_radius_top_right = 24
-		panel_style.corner_radius_bottom_left = 24
-		panel_style.corner_radius_bottom_right = 24
-		panel_style.shadow_color = Color(0, 0, 0, 0.08)
-		panel_style.shadow_size = 12
-		shop_panel.add_theme_stylebox_override("panel", panel_style)
-		
-		# Override Shop text colors
-		var title_lbl = shop_panel.get_node_or_null("TitleLabel")
-		if title_lbl:
-			title_lbl.add_theme_color_override("font_color", Color("f57f17")) # Orange/yellow
-		
-		# Style individual item containers in the Shop
-		var items = ["ItemStandard", "ItemIron", "ItemSuper"]
-		for item_name in items:
-			var item_node = shop_panel.get_node_or_null(item_name)
-			if item_node:
-				var item_style = StyleBoxFlat.new()
-				item_style.bg_color = Color("fafafa") # Soft light card background
-				item_style.border_color = Color("e0e0e0")
-				item_style.border_width_left = 1
-				item_style.border_width_right = 1
-				item_style.border_width_top = 1
-				item_style.border_width_bottom = 1
-				item_style.corner_radius_top_left = 14
-				item_style.corner_radius_top_right = 14
-				item_style.corner_radius_bottom_left = 14
-				item_style.corner_radius_bottom_right = 14
-				item_node.add_theme_stylebox_override("panel", item_style)
-				
-				# Style texts inside the card
-				var name_lbl = item_node.get_node_or_null("NameLabel")
-				if name_lbl:
-					name_lbl.add_theme_color_override("font_color", Color("37474f")) # Dark slate gray
-				var desc_lbl = item_node.get_node_or_null("DescLabel")
-				if desc_lbl:
-					desc_lbl.add_theme_color_override("font_color", Color("78909c")) # Light slate gray
-		
-	# 7. Shop Close Button
-	if shop_close_button:
-		var btn_normal = StyleBoxFlat.new()
-		btn_normal.bg_color = Color("ffffff")
-		btn_normal.border_color = Color("ef5350") # Pastel Red
-		btn_normal.border_width_left = 2
-		btn_normal.border_width_right = 2
-		btn_normal.border_width_top = 2
-		btn_normal.border_width_bottom = 2
-		btn_normal.corner_radius_top_left = 8
-		btn_normal.corner_radius_top_right = 8
-		btn_normal.corner_radius_bottom_left = 8
-		btn_normal.corner_radius_bottom_right = 8
-		
-		var btn_hover = btn_normal.duplicate()
-		btn_hover.bg_color = Color("ffebee")
-		btn_hover.shadow_size = 2
-		
-		var btn_pressed = btn_normal.duplicate()
-		btn_pressed.bg_color = Color("ffcdd2")
-		
-		shop_close_button.add_theme_stylebox_override("normal", btn_normal)
-		shop_close_button.add_theme_stylebox_override("hover", btn_hover)
-		shop_close_button.add_theme_stylebox_override("pressed", btn_pressed)
-		
-		shop_close_button.add_theme_color_override("font_color", Color("ef5350"))
-		shop_close_button.add_theme_color_override("font_hover_color", Color("c62828"))
-
-	# 8. Style Item Action Buttons initially
-	for i in range(shop_buttons.size()):
-		var btn = shop_buttons[i]
-		if btn:
-			var btn_style = StyleBoxFlat.new()
-			btn_style.bg_color = Color("ffffff")
-			btn_style.border_width_left = 2
-			btn_style.border_width_right = 2
-			btn_style.border_width_top = 2
-			btn_style.border_width_bottom = 2
-			btn_style.corner_radius_top_left = 10
-			btn_style.corner_radius_top_right = 10
-			btn_style.corner_radius_bottom_left = 10
-			btn_style.corner_radius_bottom_right = 10
-			btn.add_theme_stylebox_override("normal", btn_style)
-			
-			var btn_hov = btn_style.duplicate()
-			btn_hov.bg_color = Color("f5f5f5")
-			btn.add_theme_stylebox_override("hover", btn_hov)
-			
-			var btn_pr = btn_style.duplicate()
-			btn_pr.bg_color = Color("e0e0e0")
-			btn.add_theme_stylebox_override("pressed", btn_pr)
 
 func setup_zoom_camera():
 	var bg = get_node_or_null("../Background")

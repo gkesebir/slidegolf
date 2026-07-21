@@ -56,8 +56,8 @@ func initialize(start_grid_pos: Vector2i, grid_mgr: GridManager, game_mgr: GameM
 	
 	crossed_fragile_tiles.clear()
 	
-	# Apply currently equipped ball profile from SaveManager
-	apply_ball_profile(SaveManager.equipped_ball)
+	# Apply standard ball profile directly
+	apply_ball_profile("standard")
 	
 	# Instantly snap to start pos
 	global_position = grid_manager.get_cell_world_position(grid_position)
@@ -92,11 +92,17 @@ func _input(event):
 	# Block input if UI screens are visible
 	if game_manager:
 		if game_manager.victory_screen and game_manager.victory_screen.visible:
-			print("Ball debug: Input blocked by victory screen.")
 			return
-		if game_manager.get_node_or_null("UI/ShopScreen") and game_manager.get_node_or_null("UI/ShopScreen").visible:
-			print("Ball debug: Input blocked by shop screen.")
-			return
+		
+	# Keyboard controls
+	if event.is_action_pressed("ui_up"):
+		handle_swipe(Vector2(0, -1))
+	elif event.is_action_pressed("ui_down"):
+		handle_swipe(Vector2(0, 1))
+	elif event.is_action_pressed("ui_left"):
+		handle_swipe(Vector2(-1, 0))
+	elif event.is_action_pressed("ui_right"):
+		handle_swipe(Vector2(1, 0))
 		
 	if event is InputEventMouseButton:
 		if event.pressed:
@@ -133,10 +139,7 @@ func handle_swipe(swipe_vector: Vector2):
 			swipe_dir = Vector2i(0, -1) # Up
 			
 	if swipe_dir != Vector2i.ZERO:
-		print("Ball debug: Swipe valid. Calling slide_to with dir: ", swipe_dir)
 		slide_to(swipe_dir)
-	else:
-		print("Ball debug: Swipe direction evaluated to ZERO.")
 
 func slide_to(dir: Vector2i):
 	if is_moving:
@@ -171,19 +174,10 @@ func slide_to(dir: Vector2i):
 				continue
 				
 		if type == 3:
-			if not game_manager.is_bonus_mode and game_manager.all_diamonds_collected():
-				current = next_pos
-				reached_hole = true
-				path_steps.append({ "pos": current, "teleport": false })
-				break
-			elif game_manager.is_bonus_mode:
-				current = next_pos
-				reached_hole = true
-				path_steps.append({ "pos": current, "teleport": false })
-				break
-			else:
-				current = next_pos
-				path_steps.append({ "pos": current, "teleport": false })
+			current = next_pos
+			reached_hole = true
+			path_steps.append({ "pos": current, "teleport": false })
+			break
 				
 		elif type == 8:
 			current = next_pos
@@ -192,13 +186,10 @@ func slide_to(dir: Vector2i):
 				crossed_fragile_tiles.append(current)
 				
 		elif type == 10:
-			# Mud logic
+			# Mud logic: stops instantly
 			current = next_pos
 			path_steps.append({ "pos": current, "teleport": false })
-			if SaveManager.equipped_ball == "iron":
-				pass # Iron ball bypasses mud without stopping
-			else:
-				break # Normal balls stop instantly
+			break
 			
 		else:
 			current = next_pos
@@ -237,11 +228,7 @@ func on_reach_cell(cell_pos: Vector2i):
 	
 	var type = grid_manager.get_cell_type(cell_pos)
 	
-	if type == 2:
-		grid_manager.remove_diamond_visual(cell_pos)
-		game_manager.collect_diamond()
-		
-	elif type == 8:
+	if type == 8:
 		grid_manager.crack_fragile_tile(cell_pos)
 
 func on_slide_finished(final_pos: Vector2i, reached_hole: bool):
@@ -255,7 +242,7 @@ func on_slide_finished(final_pos: Vector2i, reached_hole: bool):
 			grid_manager.destroy_fragile_tile(tile)
 	crossed_fragile_tiles.clear()
 	
-	if reached_hole and not game_manager.is_bonus_mode:
+	if reached_hole:
 		game_manager.win_level()
 
 func update_button_trigger_states():
