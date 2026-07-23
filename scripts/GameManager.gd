@@ -35,6 +35,9 @@ var settings_screen: Control
 var last_ad_time_msec: int = 0
 var levels_cleared_since_ad: int = 0
 
+var level_time: float = 0.0
+var topbar_stars_label: Label
+
 func _ready():
 	last_ad_time_msec = Time.get_ticks_msec()
 	
@@ -43,6 +46,7 @@ func _ready():
 		"../UI/TopBar/DiamondLabel", 
 		"../UI/TopBar/TimerLabel", 
 		"../UI/TopBar/ShopButton", 
+		"../UI/TopBar/MuteButton",
 		"../UI/ShopScreen", 
 		"../UI/DebugPanel"
 	]
@@ -97,6 +101,28 @@ func _ready():
 		hamburger_btn.add_theme_color_override("font_color", Color("37474f"))
 		hamburger_btn.pressed.connect(_open_level_selection)
 		ui_topbar.add_child(hamburger_btn)
+		
+		# Star Display Label
+		topbar_stars_label = Label.new()
+		topbar_stars_label.name = "StarLabel"
+		topbar_stars_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		topbar_stars_label.position = Vector2(1080 - 450, 110 - 30)
+		topbar_stars_label.add_theme_font_size_override("font_size", 42)
+		topbar_stars_label.add_theme_color_override("font_color", Color(1, 0.8, 0, 1))
+		topbar_stars_label.text = "⭐ 3.0"
+		ui_topbar.add_child(topbar_stars_label)
+		
+		# Hint Button
+		var hint_btn = Button.new()
+		hint_btn.text = "💡 İPUCU"
+		hint_btn.add_theme_font_size_override("font_size", 36)
+		hint_btn.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		hint_btn.position = Vector2(1080 - 280, 110 - 40)
+		hint_btn.size = Vector2(140, 80)
+		hint_btn.add_theme_stylebox_override("normal", s_style)
+		hint_btn.add_theme_color_override("font_color", Color("00838f"))
+		hint_btn.pressed.connect(_on_hint_pressed)
+		ui_topbar.add_child(hint_btn)
 
 	_build_settings_screen()
 	_build_level_selection_screen()
@@ -118,16 +144,38 @@ func _ready():
 	if editor_button:
 		editor_button.pressed.connect(_on_editor_button_pressed)
 		
-	# Phase 5 Mute button connection
-	if mute_button:
-		mute_button.toggled.connect(_on_mute_toggled)
-		
 	setup_zoom_camera()
 	style_ui()
 	initialize_game()
 
 func _process(delta):
-	pass
+	if not game_over and current_level_index > 0:
+		level_time += delta
+		if topbar_stars_label:
+			var stars = get_current_stars()
+			topbar_stars_label.text = "⭐ %.1f" % stars
+
+func get_current_stars() -> float:
+	var base_stars = 3.0
+	var time_par = float(target_moves * 3.0)
+	var extra_moves = float(max(0, current_moves - target_moves))
+	var extra_time = max(0.0, level_time - time_par)
+	
+	var penalty_moves = extra_moves * 0.5
+	var penalty_time = floor(extra_time / 5.0) * 0.5
+	var stars = clamp(base_stars - penalty_moves - penalty_time, 1.0, 3.0)
+	return stars
+
+func _on_hint_pressed():
+	if game_over or not ball or not grid_manager:
+		return
+	if ball.is_moving:
+		return
+	
+	var HintSolver = load("res://scripts/HintSolver.gd").new()
+	var best_dir = HintSolver.get_best_move(grid_manager, ball.grid_position, diamonds_collected, total_diamonds)
+	if best_dir != Vector2i.ZERO:
+		ball.slide_to(best_dir)
 
 func initialize_game():
 	if not grid_manager or not ball:
@@ -146,20 +194,8 @@ func initialize_game():
 		load_level_from_dict(level_data)
 		return
 
-	var level1_path = "res://levels/level_1.json"
-	if FileAccess.file_exists(level1_path):
-		load_level_from_json(level1_path)
-	else:
-		current_level_path = ""
-		current_moves = 0
-		total_diamonds = count_diamonds_in_grid()
-		diamonds_collected = 0
-		update_ui()
-		
-		if victory_screen:
-			victory_screen.hide()
-			
-		ball.initialize(Vector2i(1, 1), grid_manager, self)
+	var start_idx = SaveManager.current_level
+	start_specific_level(start_idx)
 
 func load_level_from_json(path: String) -> bool:
 	if not FileAccess.file_exists(path):
@@ -194,6 +230,7 @@ func load_level_from_json(path: String) -> bool:
 	grid_manager.reset_grid()
 	
 	current_moves = 0
+	level_time = 0.0
 	total_diamonds = count_diamonds_in_grid()
 	diamonds_collected = 0
 	target_moves = level_data.get("min_moves", 0)
@@ -221,6 +258,7 @@ func load_level_from_dict(level_data: Dictionary):
 	grid_manager.reset_grid()
 	
 	current_moves = 0
+	level_time = 0.0
 	total_diamonds = count_diamonds_in_grid()
 	diamonds_collected = 0
 	target_moves = level_data.get("min_moves", 0)
@@ -281,7 +319,11 @@ func win_level():
 	level_cleared = true
 	AudioController.play_victory()
 	
-	# Akilli Odul Sistemi (Smart Reward)
+	# Star Calculation
+	var final_stars = get_current_stars()
+	SaveManager.update_level_stars(current_level_index, final_stars)
+	
+	# Smart Reward
 	var reward = diamonds_collected
 	if current_moves > target_moves:
 		var diff = current_moves - target_moves
@@ -310,6 +352,35 @@ func show_victory_screen():
 		if info_label:
 			info_label.text = "Tebrikler!\nHamle: %d / %d" % [current_moves, target_moves]
 			
+		var stars_label = victory_screen.get_node_or_null("Panel/StarsLabel")
+		if not stars_label:
+			stars_label = Label.new()
+			stars_label.name = "StarsLabel"
+			stars_label.add_theme_font_size_override("font_size", 80)
+			stars_label.add_theme_color_override("font_color", Color(1, 0.8, 0, 1))
+			stars_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+			stars_label.position.y -= 50
+			stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			var panel = victory_screen.get_node_or_null("Panel")
+			if panel:
+				panel.add_child(stars_label)
+		
+		if stars_label:
+			var stars = get_current_stars()
+			var star_text = ""
+			for i in range(floor(stars)):
+				star_text += "⭐"
+			if stars - floor(stars) >= 0.5:
+				star_text += "✨"
+			stars_label.text = star_text
+			
+			# Animate stars bouncing
+			stars_label.scale = Vector2.ZERO
+			stars_label.pivot_offset = stars_label.size / 2.0
+			var stween = create_tween()
+			stween.tween_property(stars_label, "scale", Vector2.ONE * 1.5, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.2)
+			stween.tween_property(stars_label, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			
 		var panel = victory_screen.get_node_or_null("Panel")
 		if panel:
 			panel.scale = Vector2.ZERO
@@ -318,12 +389,8 @@ func show_victory_screen():
 			tween.tween_property(panel, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			
 		if restart_button:
-			if current_moves <= target_moves + 2:
-				restart_button.text = "SONRAKİ BÖLÜM"
-				restart_button.add_theme_color_override("font_color", Color("00b0ff"))
-			else:
-				restart_button.text = "TEKRAR DENE"
-				restart_button.add_theme_color_override("font_color", Color("ff1744"))
+			restart_button.text = "SONRAKİ BÖLÜM"
+			restart_button.add_theme_color_override("font_color", Color("00b0ff"))
 
 func check_and_show_ad():
 	var current_time = Time.get_ticks_msec()
@@ -632,6 +699,7 @@ func _build_settings_screen():
 
 
 var level_selection_screen: Control
+var level_grid: GridContainer
 
 func _build_level_selection_screen():
 	level_selection_screen = Control.new()
@@ -676,32 +744,12 @@ func _build_level_selection_screen():
 	scroll.offset_right = -40
 	level_selection_screen.add_child(scroll)
 	
-	var grid = GridContainer.new()
-	grid.columns = 5
-	grid.add_theme_constant_override("h_separation", 20)
-	grid.add_theme_constant_override("v_separation", 20)
-	scroll.add_child(grid)
+	level_grid = GridContainer.new()
+	level_grid.columns = 5
+	level_grid.add_theme_constant_override("h_separation", 20)
+	level_grid.add_theme_constant_override("v_separation", 20)
+	scroll.add_child(level_grid)
 	
-	for i in range(1, 101):
-		var btn = Button.new()
-		btn.text = str(i)
-		btn.add_theme_font_size_override("font_size", 40)
-		btn.custom_minimum_size = Vector2(180, 180)
-		
-		var b_style = StyleBoxFlat.new()
-		b_style.bg_color = Color("37474f")
-		b_style.corner_radius_top_left = 20
-		b_style.corner_radius_top_right = 20
-		b_style.corner_radius_bottom_left = 20
-		b_style.corner_radius_bottom_right = 20
-		btn.add_theme_stylebox_override("normal", b_style)
-		
-		btn.pressed.connect(func(): 
-			level_selection_screen.hide()
-			start_specific_level(i)
-		)
-		grid.add_child(btn)
-		
 	var ui = get_node_or_null("../UI")
 	if ui:
 		ui.add_child(level_selection_screen)
@@ -710,10 +758,51 @@ func _build_level_selection_screen():
 
 func _open_level_selection():
 	if level_selection_screen:
+		if level_grid:
+			for child in level_grid.get_children():
+				child.queue_free()
+				
+			for i in range(1, 101):
+				var btn = Button.new()
+				btn.text = str(i)
+				btn.add_theme_font_size_override("font_size", 40)
+				btn.custom_minimum_size = Vector2(180, 180)
+				
+				var stars_earned = 0.0
+				var key = str(i)
+				if SaveManager.level_stars.has(key):
+					stars_earned = SaveManager.level_stars[key]
+					
+				if stars_earned > 0.0:
+					var star_lbl = Label.new()
+					star_lbl.text = "⭐ %.1f" % stars_earned
+					star_lbl.add_theme_font_size_override("font_size", 28)
+					star_lbl.add_theme_color_override("font_color", Color(1, 0.8, 0))
+					star_lbl.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+					star_lbl.offset_bottom = -10
+					star_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					btn.add_child(star_lbl)
+				
+				var b_style = StyleBoxFlat.new()
+				b_style.bg_color = Color("37474f")
+				if current_level_index == i:
+					b_style.bg_color = Color("00838f")
+				b_style.corner_radius_top_left = 20
+				b_style.corner_radius_top_right = 20
+				b_style.corner_radius_bottom_left = 20
+				b_style.corner_radius_bottom_right = 20
+				btn.add_theme_stylebox_override("normal", b_style)
+				
+				btn.pressed.connect(func(): 
+					level_selection_screen.hide()
+					start_specific_level(i)
+				)
+				level_grid.add_child(btn)
 		level_selection_screen.show()
 
 func start_specific_level(idx: int):
 	current_level_index = idx
+	SaveManager.update_current_level(idx)
 	var path = "res://levels/level_%d.json" % idx
 	if FileAccess.file_exists(path):
 		load_level_from_json(path)

@@ -10,6 +10,9 @@ var equipped_ball: String = "standard"
 var save_version: int = SAVE_VERSION
 var playtest_level_data: Dictionary = {}
 
+var current_level: int = 1
+var level_stars: Dictionary = {}
+
 func _ready():
 	load_game()
 
@@ -18,6 +21,8 @@ func save_game():
 		"gems_wallet": gems_wallet,
 		"unlocked_balls": unlocked_balls,
 		"equipped_ball": equipped_ball,
+		"current_level": current_level,
+		"level_stars": level_stars,
 		"save_version": save_version
 	}
 	
@@ -57,7 +62,9 @@ func load_game():
 		gems_wallet = int(data.get("gems_wallet", 0))
 		unlocked_balls = data.get("unlocked_balls", ["standard"])
 		equipped_ball = data.get("equipped_ball", "standard")
-		print("SaveManager: Game loaded. Gems: ", gems_wallet, ", Equipped: ", equipped_ball)
+		current_level = int(data.get("current_level", 1))
+		level_stars = data.get("level_stars", {})
+		print("SaveManager: Game loaded. Gems: ", gems_wallet, ", Level: ", current_level)
 	else:
 		printerr("SaveManager: JSON Parse Error during load: ", json.get_error_message())
 		reset_defaults()
@@ -66,7 +73,22 @@ func reset_defaults():
 	gems_wallet = 0
 	unlocked_balls = ["standard"]
 	equipped_ball = "standard"
+	current_level = 1
+	level_stars = {}
 	save_version = SAVE_VERSION
+	save_game()
+
+func update_level_stars(level: int, stars: float):
+	var key = str(level)
+	if level_stars.has(key):
+		if stars > level_stars[key]:
+			level_stars[key] = stars
+	else:
+		level_stars[key] = stars
+	save_game()
+
+func update_current_level(level: int):
+	current_level = level
 	save_game()
 
 func add_gems(amount: int):
