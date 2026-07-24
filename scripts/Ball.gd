@@ -85,7 +85,7 @@ func _draw():
 	# 4. Minimalist specular reflection highlight
 	draw_circle(Vector2(-radius * 0.35, -radius * 0.35), radius * 0.25, Color(1, 1, 1, 0.4))
 
-func _unhandled_input(event):
+func _input(event):
 	if is_moving:
 		return
 		
@@ -96,6 +96,11 @@ func _unhandled_input(event):
 		if "settings_screen" in game_manager and game_manager.settings_screen and game_manager.settings_screen.visible:
 			return
 		if "level_selection_screen" in game_manager and game_manager.level_selection_screen and game_manager.level_selection_screen.visible:
+			return
+			
+	# Block input if the touch/click is in the TopBar area (y < 220)
+	if event is InputEventMouseButton or event is InputEventScreenTouch:
+		if event.position.y < 220:
 			return
 		
 	# Keyboard controls
