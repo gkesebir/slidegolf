@@ -54,6 +54,7 @@ func initialize(start_grid_pos: Vector2i, grid_mgr: GridManager, game_mgr: GameM
 	grid_manager = grid_mgr
 	game_manager = game_mgr
 	
+	is_swiping = false
 	crossed_fragile_tiles.clear()
 	
 	# Apply standard ball profile directly
@@ -121,6 +122,19 @@ func _input(event):
 			cam.zoom += Vector2(zoom_change, zoom_change)
 			cam.zoom = cam.zoom.clamp(Vector2(0.3, 0.3), Vector2(2.0, 2.0))
 		return
+		
+	# Mouse wheel zoom
+	if event is InputEventMouseButton:
+		var cam = get_node_or_null("/root/Main/MainCamera")
+		if cam:
+			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				cam.zoom += Vector2(0.1, 0.1)
+				cam.zoom = cam.zoom.clamp(Vector2(0.3, 0.3), Vector2(2.0, 2.0))
+				return
+			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				cam.zoom -= Vector2(0.1, 0.1)
+				cam.zoom = cam.zoom.clamp(Vector2(0.3, 0.3), Vector2(2.0, 2.0))
+				return
 		
 	if event is InputEventMouseButton or event is InputEventScreenTouch:
 		if event.pressed:

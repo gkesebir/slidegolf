@@ -76,16 +76,16 @@ func _ready():
 		diamond_label = Label.new()
 		diamond_label.name = "DiamondLabel"
 		diamond_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
-		diamond_label.position = Vector2(40, 110 - 30)
+		diamond_label.position = Vector2(40, -40) # Relative to center
 		diamond_label.add_theme_font_size_override("font_size", 42)
 		diamond_label.add_theme_color_override("font_color", Color("37474f"))
 		bottom_bar.add_child(diamond_label)
 		
-		# Move Label (moved to BottomBar, created dynamically now)
+		# Move Label (moved to BottomBar)
 		move_label = Label.new()
 		move_label.name = "MoveLabel"
 		move_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		move_label.position = Vector2(540 - 100, 110 - 30)
+		move_label.position = Vector2(-100, -40) # Relative to center
 		move_label.add_theme_font_size_override("font_size", 48)
 		move_label.add_theme_color_override("font_color", Color("2e7d32"))
 		move_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -102,8 +102,9 @@ func _ready():
 		var zoom_in_btn = Button.new()
 		zoom_in_btn.text = "➕"
 		zoom_in_btn.add_theme_font_size_override("font_size", 40)
-		zoom_in_btn.position = Vector2(1080 - 180, 110 - 40)
-		zoom_in_btn.size = Vector2(80, 80)
+		zoom_in_btn.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+		zoom_in_btn.position = Vector2(-220, -50)
+		zoom_in_btn.size = Vector2(100, 100)
 		zoom_in_btn.add_theme_stylebox_override("normal", s_style)
 		zoom_in_btn.pressed.connect(_zoom_in)
 		bottom_bar.add_child(zoom_in_btn)
@@ -111,54 +112,61 @@ func _ready():
 		var zoom_out_btn = Button.new()
 		zoom_out_btn.text = "➖"
 		zoom_out_btn.add_theme_font_size_override("font_size", 40)
-		zoom_out_btn.position = Vector2(1080 - 90, 110 - 40)
-		zoom_out_btn.size = Vector2(80, 80)
+		zoom_out_btn.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+		zoom_out_btn.position = Vector2(-110, -50)
+		zoom_out_btn.size = Vector2(100, 100)
 		zoom_out_btn.add_theme_stylebox_override("normal", s_style)
 		zoom_out_btn.pressed.connect(_zoom_out)
 		bottom_bar.add_child(zoom_out_btn)
 
-		# TopBar Buttons
+		# TopBar Buttons (+50% size: 80x80 -> 120x120)
+		var t_style = s_style.duplicate()
+		t_style.corner_radius_top_left = 30
+		t_style.corner_radius_top_right = 30
+		t_style.corner_radius_bottom_left = 30
+		t_style.corner_radius_bottom_right = 30
+		
 		var hamburger_btn = Button.new()
 		hamburger_btn.text = "☰"
-		hamburger_btn.add_theme_font_size_override("font_size", 50)
-		hamburger_btn.position = Vector2(40, 110 - 40)
-		hamburger_btn.size = Vector2(80, 80)
-		hamburger_btn.add_theme_stylebox_override("normal", s_style)
+		hamburger_btn.add_theme_font_size_override("font_size", 75)
+		hamburger_btn.position = Vector2(40, 50)
+		hamburger_btn.size = Vector2(120, 120)
+		hamburger_btn.add_theme_stylebox_override("normal", t_style)
 		hamburger_btn.pressed.connect(_open_level_selection)
 		ui_topbar.add_child(hamburger_btn)
 		
 		var restart_top_btn = Button.new()
 		restart_top_btn.text = "🔄"
-		restart_top_btn.add_theme_font_size_override("font_size", 46)
-		restart_top_btn.position = Vector2(140, 110 - 40)
-		restart_top_btn.size = Vector2(80, 80)
-		restart_top_btn.add_theme_stylebox_override("normal", s_style)
+		restart_top_btn.add_theme_font_size_override("font_size", 70)
+		restart_top_btn.position = Vector2(180, 50)
+		restart_top_btn.size = Vector2(120, 120)
+		restart_top_btn.add_theme_stylebox_override("normal", t_style)
 		restart_top_btn.pressed.connect(_on_restart_button_pressed)
 		ui_topbar.add_child(restart_top_btn)
 		
 		var settings_btn = Button.new()
 		settings_btn.text = "⚙️"
-		settings_btn.add_theme_font_size_override("font_size", 50)
-		settings_btn.position = Vector2(1080 - 120, 110 - 40)
-		settings_btn.size = Vector2(80, 80)
-		settings_btn.add_theme_stylebox_override("normal", s_style)
+		settings_btn.add_theme_font_size_override("font_size", 75)
+		settings_btn.position = Vector2(1080 - 160, 50)
+		settings_btn.size = Vector2(120, 120)
+		settings_btn.add_theme_stylebox_override("normal", t_style)
 		settings_btn.pressed.connect(_open_settings)
 		ui_topbar.add_child(settings_btn)
 		
 		hint_btn = Button.new()
 		hint_btn.text = "💡"
-		hint_btn.add_theme_font_size_override("font_size", 50)
-		hint_btn.position = Vector2(1080 - 220, 110 - 40)
-		hint_btn.size = Vector2(80, 80)
-		hint_btn.add_theme_stylebox_override("normal", s_style)
+		hint_btn.add_theme_font_size_override("font_size", 75)
+		hint_btn.position = Vector2(1080 - 300, 50)
+		hint_btn.size = Vector2(120, 120)
+		hint_btn.add_theme_stylebox_override("normal", t_style)
 		hint_btn.pressed.connect(_on_hint_pressed)
 		ui_topbar.add_child(hint_btn)
 		
 		# Star Display Label
 		topbar_stars_label = Label.new()
 		topbar_stars_label.name = "StarLabel"
-		topbar_stars_label.position = Vector2(1080 - 450, 110 - 30)
-		topbar_stars_label.add_theme_font_size_override("font_size", 42)
+		topbar_stars_label.position = Vector2(1080 - 550, 80)
+		topbar_stars_label.add_theme_font_size_override("font_size", 54)
 		topbar_stars_label.add_theme_color_override("font_color", Color(1, 0.8, 0, 1))
 		topbar_stars_label.text = "⭐ 3.0"
 		ui_topbar.add_child(topbar_stars_label)
@@ -229,14 +237,16 @@ func _show_ad_for_hint():
 func _on_hint_ad_finished():
 	if hint_btn:
 		hint_btn.text = "💡"
+		hint_btn.add_theme_color_override("font_color", Color("00838f"))
 		hint_btn.modulate = Color(1.0, 1.0, 1.0)
 	_grant_hint()
 
 func _grant_hint():
 	hints_used += 1
 	if hint_btn and hints_used >= 1:
-		hint_btn.text = "💡 📺"
-		hint_btn.modulate = Color(0.7, 0.7, 0.7) # Dim to indicate Ad required
+		hint_btn.text = "💡 AD"
+		hint_btn.add_theme_color_override("font_color", Color("e53935"))
+		hint_btn.modulate = Color(0.9, 0.9, 0.9) # Slightly dim to indicate Ad required
 		
 	var HintSolver = load("res://scripts/HintSolver.gd").new()
 	var best_dir = HintSolver.get_best_move(grid_manager, ball.grid_position, diamonds_collected, total_diamonds)
@@ -302,6 +312,7 @@ func load_level_from_json(path: String) -> bool:
 	
 	if hint_btn:
 		hint_btn.text = "💡"
+		hint_btn.add_theme_color_override("font_color", Color("00838f"))
 		hint_btn.modulate = Color(1.0, 1.0, 1.0)
 		
 	total_diamonds = count_diamonds_in_grid()
@@ -336,6 +347,7 @@ func load_level_from_dict(level_data: Dictionary):
 	
 	if hint_btn:
 		hint_btn.text = "💡"
+		hint_btn.add_theme_color_override("font_color", Color("00838f"))
 		hint_btn.modulate = Color(1.0, 1.0, 1.0)
 		
 	total_diamonds = count_diamonds_in_grid()
@@ -422,29 +434,38 @@ func show_victory_screen():
 	if victory_screen:
 		victory_screen.show()
 		
+		var panel = victory_screen.get_node_or_null("Panel")
+		if panel:
+			panel.size = Vector2(900, 750)
+			panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+			panel.position = Vector2(-450, -375)
+		
 		var title_label = victory_screen.get_node_or_null("Panel/VictoryLabel")
 		if title_label:
 			title_label.text = "BÖLÜM GEÇİLDİ!"
 			title_label.add_theme_color_override("font_color", Color("00e676"))
+			title_label.position.y = 80
+			title_label.add_theme_font_size_override("font_size", 70)
 			
 		var info_label = victory_screen.get_node_or_null("Panel/InfoLabel")
 		if info_label:
 			info_label.text = "Tebrikler!\nHamle: %d / %d" % [current_moves, target_moves]
+			info_label.position.y = 200
+			info_label.add_theme_font_size_override("font_size", 42)
 			
 		var stars_label = victory_screen.get_node_or_null("Panel/StarsLabel")
 		if not stars_label:
 			stars_label = Label.new()
 			stars_label.name = "StarsLabel"
-			stars_label.add_theme_font_size_override("font_size", 80)
+			stars_label.add_theme_font_size_override("font_size", 120)
 			stars_label.add_theme_color_override("font_color", Color(1, 0.8, 0, 1))
 			stars_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-			stars_label.position.y -= 50
 			stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			var panel = victory_screen.get_node_or_null("Panel")
 			if panel:
 				panel.add_child(stars_label)
 		
 		if stars_label:
+			stars_label.position.y = 80
 			var stars = get_current_stars()
 			var star_text = ""
 			for i in range(floor(stars)):
@@ -460,7 +481,6 @@ func show_victory_screen():
 			stween.tween_property(stars_label, "scale", Vector2.ONE * 1.5, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.2)
 			stween.tween_property(stars_label, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 			
-		var panel = victory_screen.get_node_or_null("Panel")
 		if panel:
 			panel.scale = Vector2.ZERO
 			panel.pivot_offset = panel.size / 2.0
@@ -470,6 +490,7 @@ func show_victory_screen():
 		if restart_button:
 			restart_button.text = "SONRAKİ BÖLÜM"
 			restart_button.add_theme_color_override("font_color", Color("00b0ff"))
+			restart_button.position.y = 560
 
 func check_and_show_ad():
 	var current_time = Time.get_ticks_msec()
