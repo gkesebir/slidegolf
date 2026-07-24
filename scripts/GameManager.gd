@@ -595,9 +595,11 @@ func _build_settings_screen():
 	panel.add_child(title)
 	
 	var vbox = VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	vbox.size = Vector2(600, 600)
-	vbox.position = (panel.size - vbox.size) / 2.0 + Vector2(0, 50)
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	vbox.offset_top = 150
+	vbox.offset_bottom = 850
+	vbox.offset_left = 100
+	vbox.offset_right = -100
 	vbox.add_theme_constant_override("separation", 30)
 	panel.add_child(vbox)
 	
