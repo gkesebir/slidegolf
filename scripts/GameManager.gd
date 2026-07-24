@@ -69,6 +69,7 @@ func _ready():
 		bottom_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 		bottom_bar.offset_top = -220
 		bottom_bar.offset_bottom = 0
+		bottom_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ui.add_child(bottom_bar)
 	
 	if ui_topbar and bottom_bar:
@@ -545,6 +546,7 @@ func check_and_show_ad(callback: Callable) -> bool:
 	return false
 
 func _on_restart_button_pressed():
+	print("DEBUG: _on_restart_button_pressed triggered! level_cleared=", level_cleared)
 	if level_cleared:
 		# Load next sequential level
 		var next_index = current_level_index + 1
@@ -1134,13 +1136,21 @@ func _get_cam() -> Camera2D:
 	return root_node.get_node_or_null("MainCamera")
 
 func _zoom_in():
+	print("DEBUG: _zoom_in triggered")
 	var cam = _get_cam()
 	if cam:
+		print("DEBUG: cam found, zooming in. Current zoom:", cam.zoom)
 		cam.zoom = Vector2(cam.zoom.x + 0.1, cam.zoom.y + 0.1)
 		cam.zoom = cam.zoom.clamp(Vector2(0.3, 0.3), Vector2(2.0, 2.0))
+	else:
+		print("DEBUG: cam NOT found in _zoom_in!")
 
 func _zoom_out():
+	print("DEBUG: _zoom_out triggered")
 	var cam = _get_cam()
 	if cam:
+		print("DEBUG: cam found, zooming out. Current zoom:", cam.zoom)
 		cam.zoom = Vector2(cam.zoom.x - 0.1, cam.zoom.y - 0.1)
 		cam.zoom = cam.zoom.clamp(Vector2(0.3, 0.3), Vector2(2.0, 2.0))
+	else:
+		print("DEBUG: cam NOT found in _zoom_out!")
