@@ -53,42 +53,57 @@ func setup_grid():
 func create_cell_visual(grid_pos: Vector2i, type: int):
 	var cell_pos = Vector2(grid_pos.x * cell_size, grid_pos.y * cell_size)
 	
-	# Draw checkerboard background for all non-void cells
+	# Draw base Grass tile for all non-void cells
 	if type != 9:
-		var bg_rect = ColorRect.new()
-		bg_rect.size = Vector2(cell_size, cell_size)
-		bg_rect.position = cell_pos
+		var tile_size = cell_size - 10
+		var tile_pos = cell_pos + Vector2(5, 5)
+		
+		var grass_panel = Panel.new()
+		grass_panel.size = Vector2(tile_size, tile_size)
+		grass_panel.position = tile_pos
+		
+		var style = StyleBoxFlat.new()
 		if (grid_pos.x + grid_pos.y) % 2 == 0:
-			bg_rect.color = Color("a1d59b") # Light pastel green
+			style.bg_color = Color("99deb9") # Mint green
 		else:
-			bg_rect.color = Color("87c380") # Darker pastel green
-		add_child(bg_rect)
-	else:
-		# Distinct void cell styling (depressed empty tile)
-		var void_bg = ColorRect.new()
-		void_bg.size = Vector2(cell_size, cell_size)
-		void_bg.position = cell_pos
-		void_bg.color = Color("b0bec5") # dark grayish blue edge
-		add_child(void_bg)
+			style.bg_color = Color("91d4af") # Slightly darker mint
+			
+		style.corner_radius_top_left = 16
+		style.corner_radius_top_right = 16
+		style.corner_radius_bottom_left = 16
+		style.corner_radius_bottom_right = 16
+		grass_panel.add_theme_stylebox_override("panel", style)
 		
-		var void_inner = ColorRect.new()
-		void_inner.size = Vector2(cell_size - 6, cell_size - 6)
-		void_inner.position = cell_pos + Vector2(3, 3)
-		void_inner.color = Color("cfd8dc") # lighter gray inside
-		add_child(void_inner)
-		
-		# Cross mark inside void
-		var cross1 = ColorRect.new()
-		cross1.size = Vector2(cell_size * 0.4, 4)
-		cross1.position = cell_pos + Vector2(cell_size * 0.3, cell_size * 0.5 - 2)
-		cross1.pivot_offset = Vector2(cell_size * 0.2, 2)
-		cross1.rotation = deg_to_rad(45)
-		cross1.color = Color(0, 0, 0, 0.1)
-		add_child(cross1)
-		
-		var cross2 = cross1.duplicate()
-		cross2.rotation = deg_to_rad(-45)
-		add_child(cross2)
+		# Add 3 tiny grass blades
+		var blade_color = Color("7ac29a")
+		var blade_positions = [Vector2(20, 30), Vector2(80, 20), Vector2(40, 90)]
+		for bp in blade_positions:
+			var center = Control.new()
+			center.position = bp
+			
+			var blade1 = ColorRect.new()
+			blade1.size = Vector2(4, 12)
+			blade1.position = Vector2(-2, -12)
+			blade1.color = blade_color
+			
+			var blade2 = ColorRect.new()
+			blade2.size = Vector2(4, 10)
+			blade2.position = Vector2(-6, -10)
+			blade2.rotation = deg_to_rad(-30)
+			blade2.color = blade_color
+			
+			var blade3 = ColorRect.new()
+			blade3.size = Vector2(4, 10)
+			blade3.position = Vector2(2, -10)
+			blade3.rotation = deg_to_rad(30)
+			blade3.color = blade_color
+			
+			center.add_child(blade1)
+			center.add_child(blade2)
+			center.add_child(blade3)
+			grass_panel.add_child(center)
+			
+		add_child(grass_panel)
 	
 	# 1. Wall (1)
 	if type == 1:
@@ -136,73 +151,39 @@ func spawn_wall_visual(grid_pos: Vector2i):
 	wall.size = Vector2(cell_size, cell_size)
 	wall.position = cell_pos
 	
-	# Drop Shadow under the block
-	var shadow = Panel.new()
-	shadow.size = Vector2(cell_size - 8, cell_size - 8)
-	shadow.position = Vector2(4, 12)
-	var shadow_style = StyleBoxFlat.new()
-	shadow_style.bg_color = Color(0, 0, 0, 0.12)
-	shadow_style.corner_radius_top_left = 12
-	shadow_style.corner_radius_top_right = 12
-	shadow_style.corner_radius_bottom_left = 12
-	shadow_style.corner_radius_bottom_right = 12
-	shadow.add_theme_stylebox_override("panel", shadow_style)
-	wall.add_child(shadow)
+	var wall_panel = Panel.new()
+	var tile_size = cell_size - 6
+	wall_panel.size = Vector2(tile_size, tile_size)
+	wall_panel.position = Vector2(3, 3)
 	
-	# 3D Depth (Bottom face)
-	var depth_panel = Panel.new()
-	depth_panel.size = Vector2(cell_size - 6, cell_size - 6)
-	depth_panel.position = Vector2(3, 3)
-	var depth_style = StyleBoxFlat.new()
-	depth_style.bg_color = Color("5d4037") # Dark pastel brown
-	depth_style.corner_radius_top_left = 12
-	depth_style.corner_radius_top_right = 12
-	depth_style.corner_radius_bottom_left = 12
-	depth_style.corner_radius_bottom_right = 12
-	depth_panel.add_theme_stylebox_override("panel", depth_style)
-	wall.add_child(depth_panel)
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("fad5c4") # Light wood/beige
+	style.corner_radius_top_left = 20
+	style.corner_radius_top_right = 20
+	style.corner_radius_bottom_left = 20
+	style.corner_radius_bottom_right = 20
+	wall_panel.add_theme_stylebox_override("panel", style)
 	
-	# Top Face
-	var top_panel = Panel.new()
-	top_panel.size = Vector2(cell_size - 6, cell_size - 16)
-	top_panel.position = Vector2(3, 3)
-	var top_style = StyleBoxFlat.new()
-	top_style.bg_color = Color("795548") # Light pastel brown
-	top_style.border_color = Color("8d6e63")
-	top_style.border_width_left = 2
-	top_style.border_width_right = 2
-	top_style.border_width_top = 2
-	top_style.border_width_bottom = 2
-	top_style.corner_radius_top_left = 12
-	top_style.corner_radius_top_right = 12
-	top_style.corner_radius_bottom_left = 10
-	top_style.corner_radius_bottom_right = 10
-	top_panel.add_theme_stylebox_override("panel", top_style)
-	wall.add_child(top_panel)
+	# Wood grain (simple vertical lines)
+	var line_color = Color("f3c4af")
+	var line_xs = [tile_size * 0.25, tile_size * 0.5, tile_size * 0.75]
+	for lx in line_xs:
+		var grain = ColorRect.new()
+		grain.size = Vector2(4, tile_size * 0.8)
+		grain.position = Vector2(lx - 2, tile_size * 0.1)
+		grain.color = line_color
+		wall_panel.add_child(grain)
+		
+	wall.add_child(wall_panel)
 	
 	add_child(wall)
 	cell_visuals[grid_pos] = wall
 
 func spawn_diamond_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	var diamond = Control.new()
-	diamond.z_index = 10 # Elmaslarin zemin tarafindan gizlenmesini onle
+	diamond.z_index = 10 
 	diamond.size = Vector2(cell_size * 0.4, cell_size * 0.4)
 	diamond.position = cell_pos + Vector2(cell_size * 0.3, cell_size * 0.3)
-	
-	# Drop Shadow under the diamond
-	var shadow = Panel.new()
-	shadow.size = diamond.size
-	shadow.position = Vector2(4, 10)
-	shadow.pivot_offset = diamond.size / 2.0
-	shadow.rotation = deg_to_rad(45)
-	var shadow_style = StyleBoxFlat.new()
-	shadow_style.bg_color = Color(0, 0, 0, 0.12)
-	shadow_style.corner_radius_top_left = 4
-	shadow_style.corner_radius_top_right = 4
-	shadow_style.corner_radius_bottom_left = 4
-	shadow_style.corner_radius_bottom_right = 4
-	shadow.add_theme_stylebox_override("panel", shadow_style)
-	diamond.add_child(shadow)
 	
 	# Diamond Body
 	var inner_panel = Panel.new()
@@ -211,18 +192,11 @@ func spawn_diamond_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	inner_panel.rotation = deg_to_rad(45)
 	
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color("4fc3f7") # Light pastel blue
-	style.border_color = Color("ffffff")
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 4
-	style.corner_radius_top_right = 4
-	style.corner_radius_bottom_left = 4
-	style.corner_radius_bottom_right = 4
-	style.shadow_color = Color("4fc3f7", 0.3)
-	style.shadow_size = 6
+	style.bg_color = Color("4fc3f7") # Pastel blue
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_left = 6
+	style.corner_radius_bottom_right = 6
 	
 	inner_panel.add_theme_stylebox_override("panel", style)
 	diamond.add_child(inner_panel)
@@ -239,23 +213,10 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	hole.size = Vector2(h_size, h_size)
 	hole.position = cell_pos + Vector2((cell_size - h_size)/2.0, (cell_size - h_size)/2.0)
 	
-	# Drop Shadow under the hole cup
-	var shadow = Panel.new()
-	shadow.size = hole.size
-	shadow.position = Vector2(2, 6)
-	var shadow_style = StyleBoxFlat.new()
-	shadow_style.bg_color = Color(0, 0, 0, 0.15)
-	shadow_style.corner_radius_top_left = h_size / 2.0
-	shadow_style.corner_radius_top_right = h_size / 2.0
-	shadow_style.corner_radius_bottom_left = h_size / 2.0
-	shadow_style.corner_radius_bottom_right = h_size / 2.0
-	shadow.add_theme_stylebox_override("panel", shadow_style)
-	add_child(shadow)
-	
-	# Hole Cup Rim & Center
+	# Hole Base
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color("1a1a24") # Dark hole cup center
-	style.border_color = Color("78909c") # Sleek metallic gray rim
+	style.bg_color = Color("282635") # Dark navy hole cup center
+	style.border_color = Color("484a5e") # Soft lighter rim
 	style.border_width_left = 4
 	style.border_width_right = 4
 	style.border_width_top = 4
@@ -267,20 +228,33 @@ func spawn_hole_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	hole.add_theme_stylebox_override("panel", style)
 	add_child(hole)
 	
-	# Triangular flag right in the center
+	# Flag Pole
+	var pole = Panel.new()
+	pole.size = Vector2(6, h_size)
+	pole.position = Vector2(h_size / 2.0 - 3, -h_size * 0.4)
+	var pole_style = StyleBoxFlat.new()
+	pole_style.bg_color = Color("fae59e") # Light wood pole
+	pole_style.corner_radius_top_left = 3
+	pole_style.corner_radius_top_right = 3
+	pole_style.corner_radius_bottom_left = 3
+	pole_style.corner_radius_bottom_right = 3
+	pole.add_theme_stylebox_override("panel", pole_style)
+	hole.add_child(pole)
+	
+	# Triangular flat flag
 	var flag_pts = PackedVector2Array([
 		Vector2(0, 0),
-		Vector2(20, 10),
+		Vector2(25, 10),
 		Vector2(0, 20)
 	])
 	
 	var flag = Polygon2D.new()
-	flag.color = Color("ef5350")
+	flag.color = Color("fccc75") # Pastel yellow/orange
 	flag.polygon = flag_pts
-	flag.position = Vector2(h_size / 2.0 - 5, h_size / 2.0 - 10)
-	hole.add_child(flag)
+	flag.position = Vector2(3, 5) # Attach to pole
+	pole.add_child(flag)
 	
-	# Wind effect (Tween)
+	# Wind effect (Tween) on the flag (Polygon offset)
 	var tween = create_tween().set_loops()
 	tween.tween_property(flag, "scale:x", 0.7, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(flag, "scale:x", 1.0, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -546,35 +520,27 @@ func set_cell_type(grid_pos: Vector2i, type: int):
 
 func spawn_mud_visual(grid_pos: Vector2i, cell_pos: Vector2):
 	var mud = Panel.new()
-	var m_size = cell_size - 4
+	var m_size = cell_size - 6
 	mud.size = Vector2(m_size, m_size)
-	mud.position = cell_pos + Vector2(2, 2)
+	mud.position = cell_pos + Vector2(3, 3)
 	
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color("d7ccc8") # Mud light brown (Golf Peaks pastel theme)
-	style.border_color = Color("bcaaa4") # Mud border
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.corner_radius_top_left = 12
-	style.corner_radius_top_right = 12
-	style.corner_radius_bottom_left = 12
-	style.corner_radius_bottom_right = 12
+	style.bg_color = Color("cd7f71") # Terracotta / Mud
+	style.corner_radius_top_left = 20
+	style.corner_radius_top_right = 20
+	style.corner_radius_bottom_left = 20
+	style.corner_radius_bottom_right = 20
 	mud.add_theme_stylebox_override("panel", style)
 	
-	# Add some little mud ripples or details
-	var ripple = ColorRect.new()
-	ripple.size = Vector2(cell_size * 0.4, 4)
-	ripple.position = Vector2(cell_size * 0.3, cell_size * 0.3)
-	ripple.color = Color("8d6e63", 0.3)
-	mud.add_child(ripple)
-	
-	var ripple2 = ColorRect.new()
-	ripple2.size = Vector2(cell_size * 0.3, 4)
-	ripple2.position = Vector2(cell_size * 0.4, cell_size * 0.6)
-	ripple2.color = Color("8d6e63", 0.3)
-	mud.add_child(ripple2)
+	# Add tiny specks
+	var speck_color = Color("b1685b")
+	var speck_positions = [Vector2(20, 20), Vector2(80, 30), Vector2(40, 70), Vector2(90, 80), Vector2(25, 95)]
+	for sp in speck_positions:
+		var speck = ColorRect.new()
+		speck.size = Vector2(6, 6)
+		speck.position = sp
+		speck.color = speck_color
+		mud.add_child(speck)
 	
 	add_child(mud)
 	cell_visuals[grid_pos] = mud

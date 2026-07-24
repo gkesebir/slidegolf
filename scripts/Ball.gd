@@ -68,22 +68,25 @@ func initialize(start_grid_pos: Vector2i, grid_mgr: GridManager, game_mgr: GameM
 func apply_ball_profile(profile_id: String):
 	var profile = BALL_PROFILES.get(profile_id, BALL_PROFILES["standard"])
 	speed_factor = profile["speed_factor"]
-	ball_color = profile["color"]
-	glow_color = profile["glow_color"]
+	ball_color = Color("f6f8fb") # Override all balls to be pure white as per Asset Board
 	queue_redraw()
 
 func _draw():
-	# 1. Drop shadow shifted down-right
-	draw_circle(Vector2(4, 8), radius, Color(0, 0, 0, 0.15))
-	
-	# 2. Outer rim glow
-	draw_circle(Vector2.ZERO, radius + 2, Color(glow_color.r, glow_color.g, glow_color.b, 0.25))
-	
-	# 3. Main ball body
+	# 1. Main ball body (Flat White)
 	draw_circle(Vector2.ZERO, radius, ball_color)
 	
-	# 4. Minimalist specular reflection highlight
-	draw_circle(Vector2(-radius * 0.35, -radius * 0.35), radius * 0.25, Color(1, 1, 1, 0.4))
+	# 2. Golf dimples (bottom right)
+	var dimple_color = Color("d8e3ed")
+	var dr = radius * 0.15 # Dimple radius
+	
+	draw_circle(Vector2(radius * 0.4, radius * 0.5), dr, dimple_color)
+	draw_circle(Vector2(radius * 0.6, radius * 0.2), dr, dimple_color)
+	draw_circle(Vector2(radius * 0.1, radius * 0.65), dr, dimple_color)
+	draw_circle(Vector2(radius * 0.75, -radius * 0.1), dr, dimple_color)
+	draw_circle(Vector2(radius * 0.55, 0.65 * radius), dr, dimple_color)
+	
+	# 3. Specular highlight (top left)
+	draw_circle(Vector2(-radius * 0.4, -radius * 0.4), radius * 0.35, Color(1, 1, 1, 0.9))
 
 var is_swiping: bool = false
 
