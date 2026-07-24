@@ -102,8 +102,7 @@ func _ready():
 		var zoom_in_btn = Button.new()
 		zoom_in_btn.text = "➕"
 		zoom_in_btn.add_theme_font_size_override("font_size", 40)
-		zoom_in_btn.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
-		zoom_in_btn.position = Vector2(-220, -50)
+		zoom_in_btn.position = Vector2(860, 50)
 		zoom_in_btn.size = Vector2(100, 100)
 		zoom_in_btn.add_theme_stylebox_override("normal", s_style)
 		zoom_in_btn.pressed.connect(_zoom_in)
@@ -112,8 +111,7 @@ func _ready():
 		var zoom_out_btn = Button.new()
 		zoom_out_btn.text = "➖"
 		zoom_out_btn.add_theme_font_size_override("font_size", 40)
-		zoom_out_btn.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
-		zoom_out_btn.position = Vector2(-110, -50)
+		zoom_out_btn.position = Vector2(970, 50)
 		zoom_out_btn.size = Vector2(100, 100)
 		zoom_out_btn.add_theme_stylebox_override("normal", s_style)
 		zoom_out_btn.pressed.connect(_zoom_out)
@@ -135,6 +133,10 @@ func _ready():
 		hamburger_btn.pressed.connect(_open_level_selection)
 		ui_topbar.add_child(hamburger_btn)
 		
+		var old_diamond = ui_topbar.get_node_or_null("DiamondLabel")
+		if old_diamond and old_diamond != diamond_label:
+			old_diamond.queue_free()
+			
 		var restart_top_btn = Button.new()
 		restart_top_btn.text = "🔄"
 		restart_top_btn.add_theme_font_size_override("font_size", 70)
@@ -428,8 +430,8 @@ func win_level():
 	
 	levels_cleared_since_ad += 1
 	
-	check_and_show_ad()
-
+	if not check_and_show_ad(Callable(self, "show_victory_screen")):
+		show_victory_screen()
 func show_victory_screen():
 	if victory_screen:
 		victory_screen.show()
@@ -450,13 +452,17 @@ func show_victory_screen():
 		if title_label:
 			title_label.text = "BÖLÜM GEÇİLDİ!"
 			title_label.add_theme_color_override("font_color", Color("00e676"))
-			title_label.position.y = 80
+			title_label.position = Vector2(0, 60)
+			title_label.size = Vector2(900, 100)
+			title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			title_label.add_theme_font_size_override("font_size", 70)
 			
 		var info_label = victory_screen.get_node_or_null("Panel/InfoLabel")
 		if info_label:
 			info_label.text = "Tebrikler!\nHamle: %d / %d" % [current_moves, target_moves]
-			info_label.position.y = 200
+			info_label.position = Vector2(0, 420)
+			info_label.size = Vector2(900, 100)
+			info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			info_label.add_theme_font_size_override("font_size", 42)
 			
 		var stars_label = victory_screen.get_node_or_null("Panel/StarsLabel")
@@ -465,13 +471,14 @@ func show_victory_screen():
 			stars_label.name = "StarsLabel"
 			stars_label.add_theme_font_size_override("font_size", 120)
 			stars_label.add_theme_color_override("font_color", Color(1, 0.8, 0, 1))
-			stars_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+			stars_label.add_theme_color_override("font_color", Color(1, 0.8, 0, 1))
 			stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			if panel:
 				panel.add_child(stars_label)
 		
 		if stars_label:
-			stars_label.position.y = 80
+			stars_label.position = Vector2(0, 200)
+			stars_label.size = Vector2(900, 150)
 			var stars = get_current_stars()
 			var star_text = ""
 			for i in range(floor(stars)):
@@ -525,20 +532,13 @@ func spawn_fireworks():
 				fw.launch(Vector2(start_x, start_y), Vector2(target_x, target_y))
 			)
 
-func check_and_show_ad():
+func check_and_show_ad(callback: Callable) -> bool:
 	var current_time = Time.get_ticks_msec()
 	var time_diff_sec = (current_time - last_ad_time_msec) / 1000.0
 	
-	if time_diff_sec >= 120.0 or levels_cleared_since_ad >= 3:
+	if time_diff_sec >= AD_COOLDOWN_SEC:
+		last_ad_time_msec = current_time
 		var ad_screen = get_node_or_null("../UI/AdScreen")
-		if ad_screen:
-			ad_screen.show()
-			ad_screen.start_ad_timer()
-			last_ad_time_msec = Time.get_ticks_msec()
-			levels_cleared_since_ad = 0
-		else:
-			show_victory_screen()
-	else:
 		show_victory_screen()
 
 func _on_restart_button_pressed():
@@ -911,7 +911,8 @@ func _open_level_selection():
 				if stars_earned > 0.0:
 					var star_container = HBoxContainer.new()
 					star_container.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-					star_container.offset_bottom = -15
+					star_container.offset_top = -50
+					star_container.offset_bottom = -10
 					star_container.alignment = BoxContainer.ALIGNMENT_CENTER
 					star_container.add_theme_constant_override("separation", 2)
 					
