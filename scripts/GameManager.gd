@@ -487,10 +487,33 @@ func show_victory_screen():
 			var tween = create_tween()
 			tween.tween_property(panel, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			
+		spawn_fireworks()
+			
 		if restart_button:
 			restart_button.text = "SONRAKİ BÖLÜM"
 			restart_button.add_theme_color_override("font_color", Color("00b0ff"))
 			restart_button.position.y = 560
+
+func spawn_fireworks():
+	var fw_script = load("res://scripts/Fireworks.gd")
+	if fw_script:
+		# Spawn 3 fireworks with slight delays
+		for i in range(3):
+			var t = get_tree().create_timer(i * 0.3)
+			t.timeout.connect(func():
+				var fw = fw_script.new()
+				add_child(fw)
+				
+				# Start at bottom of screen
+				var start_x = randf_range(200, 880)
+				var start_y = 1920 + 100
+				
+				# Target apex in the upper half of screen
+				var target_x = start_x + randf_range(-200, 200)
+				var target_y = randf_range(300, 700)
+				
+				fw.launch(Vector2(start_x, start_y), Vector2(target_x, target_y))
+			)
 
 func check_and_show_ad():
 	var current_time = Time.get_ticks_msec()
