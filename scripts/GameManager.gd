@@ -551,13 +551,18 @@ func check_and_show_ad(callback: Callable) -> bool:
 func _on_restart_button_pressed():
 	print("DEBUG: _on_restart_button_pressed triggered! level_cleared=", level_cleared, " current_level_index=", current_level_index)
 	if level_cleared:
-		# Load next sequential level
+		# Load next sequential level, skipping any missing levels (e.g. level 7)
 		var next_index = current_level_index + 1
-		if next_index > 100:
-			next_index = 1
-		var next_path = "res://levels/level_%d.json" % next_index
-		print("DEBUG: Loading next level: ", next_path)
-		var success = load_level_from_json(next_path)
+		var success = false
+		for attempt in range(100): # max 100 levels
+			if next_index > 100:
+				next_index = 1
+			var next_path = "res://levels/level_%d.json" % next_index
+			print("DEBUG: Loading next level: ", next_path)
+			success = load_level_from_json(next_path)
+			if success:
+				break
+			next_index += 1
 		print("DEBUG: Load success: ", success)
 	elif current_level_path != "":
 		load_level_from_json(current_level_path)
