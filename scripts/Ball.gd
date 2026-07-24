@@ -85,6 +85,8 @@ func _draw():
 	# 4. Minimalist specular reflection highlight
 	draw_circle(Vector2(-radius * 0.35, -radius * 0.35), radius * 0.25, Color(1, 1, 1, 0.4))
 
+var is_swiping: bool = false
+
 func _input(event):
 	if is_moving:
 		return
@@ -97,11 +99,6 @@ func _input(event):
 			return
 		if "level_selection_screen" in game_manager and game_manager.level_selection_screen and game_manager.level_selection_screen.visible:
 			return
-			
-	# Block input if the touch/click is in the TopBar area (y < 220)
-	if event is InputEventMouseButton or event is InputEventScreenTouch:
-		if event.position.y < 220:
-			return
 		
 	# Keyboard controls
 	if event.is_action_pressed("ui_up"):
@@ -113,25 +110,20 @@ func _input(event):
 	elif event.is_action_pressed("ui_right"):
 		handle_swipe(Vector2(1, 0))
 		
-	if event is InputEventMouseButton:
+	if event is InputEventMouseButton or event is InputEventScreenTouch:
 		if event.pressed:
-			swipe_start_pos = event.position
-			print("Ball debug: Mouse button pressed at ", swipe_start_pos)
+			if event.position.y < 220:
+				is_swiping = false
+			else:
+				is_swiping = true
+				swipe_start_pos = event.position
 		else:
-			var swipe_end_pos = event.position
-			var diff = swipe_end_pos - swipe_start_pos
-			print("Ball debug: Mouse button released. Diff length: ", diff.length(), " (min required: ", min_swipe_distance, ")")
-			if diff.length() >= min_swipe_distance:
-				handle_swipe(diff)
-				
-	elif event is InputEventScreenTouch:
-		if event.pressed:
-			swipe_start_pos = event.position
-		else:
-			var swipe_end_pos = event.position
-			var diff = swipe_end_pos - swipe_start_pos
-			if diff.length() >= min_swipe_distance:
-				handle_swipe(diff)
+			if is_swiping:
+				is_swiping = false
+				var swipe_end_pos = event.position
+				var diff = swipe_end_pos - swipe_start_pos
+				if diff.length() >= min_swipe_distance:
+					handle_swipe(diff)
 
 func handle_swipe(swipe_vector: Vector2):
 	var swipe_dir = Vector2i.ZERO
