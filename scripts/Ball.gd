@@ -132,9 +132,7 @@ func _input(event):
 		
 	# Pinch to zoom (Magnify Gesture)
 	if event is InputEventMagnifyGesture:
-		var root_node = get_tree().current_scene
-		if not root_node: root_node = get_parent()
-		var cam = root_node.get_node_or_null("MainCamera")
+		var cam = get_node_or_null("../MainCamera")
 		if cam:
 			var zoom_change = event.factor - 1.0
 			cam.zoom += Vector2(zoom_change, zoom_change)
@@ -143,9 +141,7 @@ func _input(event):
 		
 	# Mouse wheel zoom
 	if event is InputEventMouseButton:
-		var root_node = get_tree().current_scene
-		if not root_node: root_node = get_parent()
-		var cam = root_node.get_node_or_null("MainCamera")
+		var cam = get_node_or_null("../MainCamera")
 		if cam:
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				cam.zoom += Vector2(0.1, 0.1)

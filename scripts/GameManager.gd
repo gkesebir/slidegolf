@@ -277,11 +277,14 @@ func initialize_game():
 	start_specific_level(start_idx)
 
 func load_level_from_json(path: String) -> bool:
+	print("DEBUG: Attempting to load level from: ", path)
 	if not FileAccess.file_exists(path):
+		print("DEBUG: ERROR - File does not exist: ", path)
 		return false
 		
 	var file = FileAccess.open(path, FileAccess.READ)
 	if not file:
+		print("DEBUG: ERROR - Could not open file: ", path)
 		return false
 		
 	var json_str = file.get_as_text()
@@ -546,14 +549,16 @@ func check_and_show_ad(callback: Callable) -> bool:
 	return false
 
 func _on_restart_button_pressed():
-	print("DEBUG: _on_restart_button_pressed triggered! level_cleared=", level_cleared)
+	print("DEBUG: _on_restart_button_pressed triggered! level_cleared=", level_cleared, " current_level_index=", current_level_index)
 	if level_cleared:
 		# Load next sequential level
 		var next_index = current_level_index + 1
 		if next_index > 100:
 			next_index = 1
 		var next_path = "res://levels/level_%d.json" % next_index
-		load_level_from_json(next_path)
+		print("DEBUG: Loading next level: ", next_path)
+		var success = load_level_from_json(next_path)
+		print("DEBUG: Load success: ", success)
 	elif current_level_path != "":
 		load_level_from_json(current_level_path)
 	else:
@@ -1131,9 +1136,7 @@ func setup_zoom_camera():
 	if not ui: return
 
 func _get_cam() -> Camera2D:
-	var root_node = get_tree().current_scene
-	if not root_node: root_node = get_parent()
-	return root_node.get_node_or_null("MainCamera")
+	return get_node_or_null("../MainCamera")
 
 func _zoom_in():
 	print("DEBUG: _zoom_in triggered")
