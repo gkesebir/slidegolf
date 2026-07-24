@@ -536,10 +536,14 @@ func check_and_show_ad(callback: Callable) -> bool:
 	var current_time = Time.get_ticks_msec()
 	var time_diff_sec = (current_time - last_ad_time_msec) / 1000.0
 	
-	if time_diff_sec >= AD_COOLDOWN_SEC:
+	if time_diff_sec >= 120.0 or levels_cleared_since_ad >= 3:
 		last_ad_time_msec = current_time
+		levels_cleared_since_ad = 0
 		var ad_screen = get_node_or_null("../UI/AdScreen")
-		show_victory_screen()
+		if ad_screen and ad_screen.has_method("start_ad_timer"):
+			ad_screen.start_ad_timer(callback)
+			return true
+	return false
 
 func _on_restart_button_pressed():
 	if level_cleared:
