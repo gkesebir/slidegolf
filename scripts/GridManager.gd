@@ -41,7 +41,7 @@ func setup_grid():
 	var total_h = grid_height * cell_size
 	
 	var start_x = (1080.0 - total_w) / 2.0
-	var start_y = (1920.0 - total_h) / 2.0
+	var start_y = 220.0 + (1480.0 - total_h) / 2.0 # 220 top bar, 1480 playable height
 	position = Vector2(start_x, start_y)
 	
 	for y in range(grid_height):

@@ -113,6 +113,15 @@ func _input(event):
 	elif event.is_action_pressed("ui_right"):
 		handle_swipe(Vector2(1, 0))
 		
+	# Pinch to zoom (Magnify Gesture)
+	if event is InputEventMagnifyGesture:
+		var cam = get_node_or_null("/root/Main/MainCamera")
+		if cam:
+			var zoom_change = event.factor - 1.0
+			cam.zoom += Vector2(zoom_change, zoom_change)
+			cam.zoom = cam.zoom.clamp(Vector2(0.3, 0.3), Vector2(2.0, 2.0))
+		return
+		
 	if event is InputEventMouseButton or event is InputEventScreenTouch:
 		if event.pressed:
 			if event.position.y < 220:

@@ -6,6 +6,7 @@ extends Control
 
 var time_left = 3.0
 var timer_active = false
+var on_complete_callback: Callable
 
 func _ready():
 	hide()
@@ -26,7 +27,8 @@ func _process(delta):
 		if timer_label and timer_active:
 			timer_label.text = "Reklamı geçmek için %d saniye..." % ceil(time_left)
 
-func start_ad_timer():
+func start_ad_timer(callback: Callable = Callable()):
+	on_complete_callback = callback
 	time_left = 3.0
 	timer_active = true
 	show()
@@ -38,5 +40,8 @@ func start_ad_timer():
 
 func _on_close_pressed():
 	hide()
-	if game_manager and game_manager.has_method("show_victory_screen"):
+	if on_complete_callback.is_valid():
+		on_complete_callback.call()
+	elif game_manager and game_manager.has_method("show_victory_screen"):
+		# Fallback to old behavior if no callback is passed
 		game_manager.show_victory_screen()
