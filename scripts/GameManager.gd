@@ -437,8 +437,14 @@ func show_victory_screen():
 		var panel = victory_screen.get_node_or_null("Panel")
 		if panel:
 			panel.size = Vector2(900, 750)
-			panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 			panel.position = Vector2(90, 585)
+			var sb = StyleBoxFlat.new()
+			sb.bg_color = Color("ffffff")
+			sb.corner_radius_top_left = 40
+			sb.corner_radius_top_right = 40
+			sb.corner_radius_bottom_left = 40
+			sb.corner_radius_bottom_right = 40
+			panel.add_theme_stylebox_override("panel", sb)
 		
 		var title_label = victory_screen.get_node_or_null("Panel/VictoryLabel")
 		if title_label:
@@ -1110,6 +1116,7 @@ func setup_zoom_camera():
 	cam.name = "MainCamera"
 	cam.position = Vector2(540, 960)
 	get_node("/root/Main").add_child(cam)
+	cam.make_current()
 	
 	var ui = get_node_or_null("../UI")
 	if not ui: return
