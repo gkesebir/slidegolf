@@ -438,7 +438,7 @@ func show_victory_screen():
 		if panel:
 			panel.size = Vector2(900, 750)
 			panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-			panel.position = Vector2(-450, -375)
+			panel.position = Vector2(90, 585)
 		
 		var title_label = victory_screen.get_node_or_null("Panel/VictoryLabel")
 		if title_label:
@@ -502,7 +502,11 @@ func spawn_fireworks():
 			var t = get_tree().create_timer(i * 0.3)
 			t.timeout.connect(func():
 				var fw = fw_script.new()
-				add_child(fw)
+				fw.z_index = 100
+				if victory_screen:
+					victory_screen.add_child(fw)
+				else:
+					add_child(fw)
 				
 				# Start at bottom of screen
 				var start_x = randf_range(200, 880)
