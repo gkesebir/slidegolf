@@ -45,10 +45,10 @@ func _ready():
 	
 	# Cleanup old UI elements that are no longer used
 	var to_remove = [
-		"../UI/TopBar/DiamondLabel", 
-		"../UI/TopBar/TimerLabel", 
 		"../UI/TopBar/ShopButton", 
 		"../UI/TopBar/MuteButton",
+		"../UI/TopBar/DiamondLabel",
+		"../UI/TopBar/MoveLabel",
 		"../UI/ShopScreen", 
 		"../UI/DebugPanel"
 	]
@@ -505,7 +505,6 @@ func show_victory_screen():
 		if restart_button:
 			restart_button.text = "SONRAKİ BÖLÜM"
 			restart_button.add_theme_color_override("font_color", Color("00b0ff"))
-			restart_button.position.y = 560
 
 func spawn_fireworks():
 	var fw_script = load("res://scripts/Fireworks.gd")
@@ -1120,19 +1119,28 @@ func setup_zoom_camera():
 	var cam = Camera2D.new()
 	cam.name = "MainCamera"
 	cam.position = Vector2(540, 960)
-	get_node("/root/Main").add_child(cam)
+	var root_node = get_tree().current_scene
+	if not root_node:
+		root_node = get_parent()
+	root_node.add_child(cam)
 	cam.make_current()
 	
 	var ui = get_node_or_null("../UI")
 	if not ui: return
 
+func _get_cam() -> Camera2D:
+	var root_node = get_tree().current_scene
+	if not root_node: root_node = get_parent()
+	return root_node.get_node_or_null("MainCamera")
+
 func _zoom_in():
-	var cam = get_node_or_null("/root/Main/MainCamera")
+	var cam = _get_cam()
 	if cam:
 		cam.zoom = Vector2(cam.zoom.x + 0.1, cam.zoom.y + 0.1)
+		cam.zoom = cam.zoom.clamp(Vector2(0.3, 0.3), Vector2(2.0, 2.0))
 
 func _zoom_out():
-	var cam = get_node_or_null("/root/Main/MainCamera")
+	var cam = _get_cam()
 	if cam:
-		if cam.zoom.x > 0.3:
-			cam.zoom = Vector2(cam.zoom.x - 0.1, cam.zoom.y - 0.1)
+		cam.zoom = Vector2(cam.zoom.x - 0.1, cam.zoom.y - 0.1)
+		cam.zoom = cam.zoom.clamp(Vector2(0.3, 0.3), Vector2(2.0, 2.0))
