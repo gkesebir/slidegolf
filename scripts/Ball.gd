@@ -46,8 +46,32 @@ const BALL_PROFILES = {
 
 var speed_factor: float = 1.0
 
+var trail: Line2D
+var trail_max_points: int = 12
+
 func _ready():
 	queue_redraw()
+	
+	trail = Line2D.new()
+	trail.top_level = true # Ignore parent transform so points are world-space
+	trail.width = radius * 1.2
+	trail.default_color = Color(1.0, 1.0, 1.0, 0.3)
+	
+	var curve = Curve.new()
+	curve.add_point(Vector2(0, 0.0)) # Tail tapers off
+	curve.add_point(Vector2(1, 1.0)) # Head is full width
+	trail.width_curve = curve
+	
+	add_child(trail)
+
+func _process(delta):
+	if is_moving:
+		trail.add_point(global_position)
+		if trail.get_point_count() > trail_max_points:
+			trail.remove_point(0)
+	else:
+		if trail.get_point_count() > 0:
+			trail.remove_point(0)
 
 func initialize(start_grid_pos: Vector2i, grid_mgr: GridManager, game_mgr: GameManager):
 	grid_position = start_grid_pos
