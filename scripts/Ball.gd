@@ -64,14 +64,6 @@ func _ready():
 	
 	add_child(trail)
 
-func _process(delta):
-	if is_moving:
-		trail.add_point(global_position)
-		if trail.get_point_count() > trail_max_points:
-			trail.remove_point(0)
-	else:
-		if trail.get_point_count() > 0:
-			trail.remove_point(0)
 
 func initialize(start_grid_pos: Vector2i, grid_mgr: GridManager, game_mgr: GameManager):
 	grid_position = start_grid_pos
@@ -314,6 +306,14 @@ func update_button_trigger_states():
 		grid_manager.set_gate_state(false)
 
 func _process(_delta):
+	if is_moving:
+		trail.add_point(global_position)
+		if trail.get_point_count() > trail_max_points:
+			trail.remove_point(0)
+	else:
+		if trail.get_point_count() > 0:
+			trail.remove_point(0)
+			
 	if is_moving and grid_manager and game_manager:
 		# Calculate current cell based on visual global_position relative to GridManager
 		var local_pos = global_position - grid_manager.global_position
